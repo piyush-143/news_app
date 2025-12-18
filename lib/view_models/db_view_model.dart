@@ -18,6 +18,8 @@ class DbViewModel with ChangeNotifier {
   // --- UI State: Password Visibility ---
   bool _isLoginPasswordVisible = false;
   bool _isSignupPasswordVisible = false;
+  bool _isForgotPasswordVisible = false;
+  bool _isForgotConfirmPasswordVisible = false;
 
   bool get isLoggedIn => _isLoggedIn;
   String? get currentUserEmail => _currentUserEmail;
@@ -25,6 +27,8 @@ class DbViewModel with ChangeNotifier {
 
   bool get isLoginPasswordVisible => _isLoginPasswordVisible;
   bool get isSignupPasswordVisible => _isSignupPasswordVisible;
+  bool get isForgotPasswordVisible => _isForgotPasswordVisible;
+  bool get isForgotConfirmPasswordVisible => _isForgotConfirmPasswordVisible;
 
   /// Helper to set loading state
   void setLoading(bool loading) {
@@ -33,6 +37,7 @@ class DbViewModel with ChangeNotifier {
   }
 
   // --- Password Visibility Toggles ---
+
   void toggleLoginPasswordVisibility() {
     _isLoginPasswordVisible = !_isLoginPasswordVisible;
     notifyListeners();
@@ -40,6 +45,16 @@ class DbViewModel with ChangeNotifier {
 
   void toggleSignupPasswordVisibility() {
     _isSignupPasswordVisible = !_isSignupPasswordVisible;
+    notifyListeners();
+  }
+
+  void toggleForgotPasswordVisibility() {
+    _isForgotPasswordVisible = !_isForgotPasswordVisible;
+    notifyListeners();
+  }
+
+  void toggleForgotConfirmPasswordVisibility() {
+    _isForgotConfirmPasswordVisible = !_isForgotConfirmPasswordVisible;
     notifyListeners();
   }
 
@@ -71,6 +86,24 @@ class DbViewModel with ChangeNotifier {
     }
     setLoading(false);
     return exists;
+  }
+
+  /// Check if Email Exists (For Forgot Password)
+  Future<bool> checkEmailExists(String email) async {
+    setLoading(true);
+    await Future.delayed(const Duration(milliseconds: 500)); // Simulate network
+    final user = await _dbService.getUserDetails(email);
+    setLoading(false);
+    return user != null;
+  }
+
+  /// Reset Password Logic
+  Future<bool> resetPassword(String email, String newPassword) async {
+    setLoading(true);
+    await Future.delayed(const Duration(milliseconds: 500));
+    bool success = await _dbService.updatePassword(email, newPassword);
+    setLoading(false);
+    return success;
   }
 
   /// Update Profile Logic

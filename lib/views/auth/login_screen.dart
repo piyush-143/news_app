@@ -6,6 +6,7 @@ import '../../view_models/db_view_model.dart';
 import '../../widgets/custom_loader.dart';
 import '../../widgets/custom_snack_bar.dart';
 import '../home/main_controller.dart';
+import 'forgot_password_screen.dart'; // Import Forgot Password Screen
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -50,7 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const MainWrapper()),
         );
       } else {
-        // Use CustomSnackBar
         CustomSnackBar.showError(context, "Invalid email or password");
       }
     }
@@ -190,7 +190,33 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+
+                    // --- Forgot Password Button ---
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          // Clear focus before navigating
+                          FocusScope.of(context).requestFocus(FocusNode());
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Forgot Password?",
+                          style: TextStyle(
+                            color: Colors.indigo,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
                     ElevatedButton(
                       onPressed: isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(

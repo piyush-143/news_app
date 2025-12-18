@@ -88,6 +88,12 @@ class DbService {
     return null;
   }
 
+  // Backwards compatibility
+  Future<String?> getUserName(String email) async {
+    var data = await getUserDetails(email);
+    return data?[columnName] as String?;
+  }
+
   // --- Update User Profile (Name, Email) ---
   Future<bool> updateUserProfile({
     required String oldEmail,
@@ -126,6 +132,22 @@ class DbService {
       int rowsEffected = await db.update(
         tableName,
         {columnImage: imagePath},
+        where: "$columnEmail = ?",
+        whereArgs: [email],
+      );
+      return rowsEffected > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // --- Reset Password (New Feature) ---
+  Future<bool> updatePassword(String email, String newPassword) async {
+    var db = await getDb();
+    try {
+      int rowsEffected = await db.update(
+        tableName,
+        {columnPass: newPassword},
         where: "$columnEmail = ?",
         whereArgs: [email],
       );
