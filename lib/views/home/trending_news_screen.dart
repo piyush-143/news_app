@@ -38,7 +38,7 @@ class _TrendingScreenState extends State<TrendingScreen> {
                     MaterialPageRoute(builder: (_) => DetailScreen(news: news)),
                   ),
                   child: Container(
-                    color: Colors.transparent, // Increases touch area
+                    color: Colors.transparent,
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Row(
                       children: [
@@ -115,75 +115,30 @@ class _TrendingScreenState extends State<TrendingScreen> {
             )
           : trendingError != null
           ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.indigo.withOpacity(0.3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.cloud_off_rounded,
-                        color: Colors.indigo,
-                        size: 40,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      "Something went wrong",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
                       trendingError,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600,
-                        height: 1.5,
-                      ),
+                      style: const TextStyle(color: Colors.grey),
                     ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          context.read<NewsViewModel>().getNews(
-                            AppUrls.trending,
-                            "trending",
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text(
-                          "Try Again",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<NewsViewModel>().getNews(
+                        AppUrls.trending,
+                        "trending",
+                      );
+                    },
+                    child: const Text("Retry"),
+                  ),
+                ],
               ),
             )
           : Center(

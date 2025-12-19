@@ -72,7 +72,7 @@ class _ArticleWebViewState extends State<ArticleWebView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title, style: const TextStyle(fontSize: 16)),
+        title: Text(widget.title, style: const TextStyle(fontSize: 20)),
         titleSpacing: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,

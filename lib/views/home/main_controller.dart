@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:news_app/services/utils/app_urls.dart';
+import 'package:news_app/view_models/index_view_model.dart';
 import 'package:news_app/view_models/news_view_model.dart';
 import 'package:news_app/views/home/breaking_news_screen.dart';
 import 'package:news_app/views/home/settings_screen.dart';
@@ -29,7 +31,7 @@ class _MainWrapperState extends State<MainWrapper> {
       vm.getNews(AppUrls.breaking, "breaking");
       vm.getNews(AppUrls.business, "business");
       vm.getNews(AppUrls.sports, "sports");
-      vm.getNews(AppUrls.sports, "gaming");
+      vm.getNews(AppUrls.gaming, "gaming");
       //Key 2 fetching
       vm.getNews(AppUrls.recent, "recent");
       vm.getNews(AppUrls.nation, "nation");
@@ -50,13 +52,12 @@ class _MainWrapperState extends State<MainWrapper> {
     const SettingsScreen(),
   ];
 
-  Future<bool> _onWillPop() async {
-    final vm = context.read<NewsViewModel>();
-
+  Future<void> _handleBackPress() async {
+    final indexM = context.read<IndexViewModel>();
     // Check provider state instead of local state
-    if (vm.currentTabIndex != 0) {
-      vm.setTabIndex(0); // Go back to Home tab
-      return false;
+    if (indexM.currentTabIndex != 0) {
+      indexM.setTabIndex(0); // Go back to Home tab
+      return;
     } else {
       final shouldExit = await showDialog<bool>(
         context: context,
@@ -75,7 +76,7 @@ class _MainWrapperState extends State<MainWrapper> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withAlpha(25),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -159,7 +160,9 @@ class _MainWrapperState extends State<MainWrapper> {
           );
         },
       );
-      return shouldExit ?? false;
+      if (shouldExit == true) {
+        SystemNavigator.pop(); // Exit the app
+      }
     }
   }
 
@@ -168,10 +171,14 @@ class _MainWrapperState extends State<MainWrapper> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Watch the ViewModel to rebuild when tab changes
-    final navIndex = context.watch<NewsViewModel>().currentTabIndex;
+    final navIndex = context.watch<IndexViewModel>().currentTabIndex;
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackPress();
+      },
       child: Scaffold(
         body: IndexedStack(index: navIndex, children: _pages),
         bottomNavigationBar: Container(
@@ -191,13 +198,13 @@ class _MainWrapperState extends State<MainWrapper> {
               activeColor: isDark ? Colors.white : Colors.indigo,
               tabBackgroundColor: isDark
                   ? Colors.grey.shade800
-                  : Colors.indigo.withOpacity(0.2),
+                  : Colors.indigo.withAlpha(50),
               gap: 8,
               padding: const EdgeInsets.all(16),
               selectedIndex: navIndex, // Use value from Provider
               onTabChange: (index) {
                 // Update state via Provider
-                context.read<NewsViewModel>().setTabIndex(index);
+                context.read<IndexViewModel>().setTabIndex(index);
               },
 
               tabs: const [

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:news_app/view_models/db_view_model.dart';
+import 'package:news_app/view_models/index_view_model.dart';
 // Note: Ensure these files exist in your project structure
 import 'package:news_app/view_models/news_view_model.dart';
 import 'package:news_app/view_models/theme_view_model.dart';
@@ -18,6 +19,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ThemeViewModel()),
         ChangeNotifierProvider(create: (_) => NewsViewModel()),
         ChangeNotifierProvider(create: (_) => DbViewModel()),
+        ChangeNotifierProvider(create: (_) => IndexViewModel()),
       ],
       child: const NewsApp(),
     ),

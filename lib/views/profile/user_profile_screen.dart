@@ -335,7 +335,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.indigo.withOpacity(0.1),
+              color: Colors.indigo.withAlpha(50),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: Colors.indigo, size: 22),

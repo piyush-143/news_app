@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:news_app/services/utils/date_formatter.dart';
 
 import '../models/news_model.dart';
+import '../services/utils/date_formatter.dart';
 
 class FeaturedNewsCard extends StatelessWidget {
   final Article news;
@@ -12,19 +12,12 @@ class FeaturedNewsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.5)
-                : Colors.grey.shade300,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+    return Card(
+      elevation: 3,
+      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      shadowColor: isDark ? Colors.grey.shade800 : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadiusGeometry.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,7 +34,7 @@ class FeaturedNewsCard extends StatelessWidget {
                 errorBuilder: (c, o, s) => Container(
                   height: 270,
                   width: double.infinity,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     image: DecorationImage(
                       image: AssetImage("assets/no_img.png"),
                       fit: BoxFit.fill,
@@ -59,10 +52,12 @@ class FeaturedNewsCard extends StatelessWidget {
                 Text(
                   "${news.title}...",
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 19,
                     fontWeight: FontWeight.w600,
                     height: 1,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -78,11 +73,8 @@ class FeaturedNewsCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-
                     Text(
-                      DateFormatter.format(
-                        news.publishedAt,
-                      ), // Placeholder for formatted time (e.g., relative time)
+                      DateFormatter.format(news.publishedAt),
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 12,

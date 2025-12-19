@@ -6,39 +6,20 @@ import '../models/news_model.dart';
 class NewsViewModel with ChangeNotifier {
   final NewsServices _newsServices = NewsServices();
 
-  // --- UI State: Bottom Navigation ---
-  int _currentTabIndex = 0;
-  int get currentTabIndex => _currentTabIndex;
-
-  void setTabIndex(int index) {
-    if (_currentTabIndex == index) return;
-    _currentTabIndex = index;
-    notifyListeners();
-  }
-
-  // --- UI State: Category Selection ---
-  int _selectedCategoryIndex = 0;
-  int get selectedCategoryIndex => _selectedCategoryIndex;
-
-  void setSelectedCategoryIndex(int index) {
-    _selectedCategoryIndex = index;
-    notifyListeners();
-  }
-
   // --- State Variables ---
-  NewsResponseModel? _featuredNewsList;
-  NewsResponseModel? _recentNewsList;
-  NewsResponseModel? _trendingNews;
-  NewsResponseModel? _breakingNews;
-  NewsResponseModel? _technologyNews;
-  NewsResponseModel? _healthNews;
-  NewsResponseModel? _sportsNews;
-  NewsResponseModel? _scienceNews;
-  NewsResponseModel? _gamingNews;
-  NewsResponseModel? _businessNews;
-  NewsResponseModel? _entertainmentNews;
-  NewsResponseModel? _nationNews;
-  NewsResponseModel? _worldNews;
+  NewsResponseModel? _featuredNewsList,
+      _recentNewsList,
+      _trendingNews,
+      _breakingNews,
+      _technologyNews,
+      _healthNews,
+      _sportsNews,
+      _scienceNews,
+      _gamingNews,
+      _businessNews,
+      _entertainmentNews,
+      _nationNews,
+      _worldNews;
 
   // --- Getters ---
   NewsResponseModel? get featuredNewsList => _featuredNewsList;
@@ -57,19 +38,16 @@ class NewsViewModel with ChangeNotifier {
 
   bool loading = false;
 
-  // Map to store errors per category key
   final Map<String, String> _categoryErrors = {};
-
-  String? getErrorForCategory(String category) {
-    return _categoryErrors[category.toLowerCase()];
-  }
+  String? getErrorForCategory(String category) =>
+      _categoryErrors[category.toLowerCase()];
 
   List<String> categories = [
     "All",
     "Tech",
     "Health",
     "Science",
-    "Gaming",
+    // "Gaming",
     "Business",
     "Entertainment",
     "Sports",
@@ -102,19 +80,13 @@ class NewsViewModel with ChangeNotifier {
 
   Future<void> getNews(String url, String category) async {
     final key = category.toLowerCase();
-
-    // 1. Clear previous errors immediately
     _categoryErrors.remove(key);
 
-    // 2. Set loading state for main categories
     if (key == "featured" || key == "recent") {
       loading = true;
     }
 
-    // 3. Reset specific data to trigger "Loading" state in UI (since data becomes null)
     _resetDataByCategory(key);
-
-    // 4. CRITICAL: Notify listeners HERE to update UI immediately to "Loading" state
     notifyListeners();
 
     try {
@@ -127,7 +99,6 @@ class NewsViewModel with ChangeNotifier {
       if (key == "featured" || key == "recent") {
         loading = false;
       }
-      // Notify again when data arrives or error occurs
       notifyListeners();
     }
   }

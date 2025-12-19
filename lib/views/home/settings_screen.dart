@@ -55,7 +55,7 @@ class SettingsScreen extends StatelessWidget {
                                 imagePath != null && imagePath.isNotEmpty;
 
                             return CircleAvatar(
-                              radius: 20,
+                              radius: 22,
                               backgroundColor: isDark
                                   ? Colors.grey.shade800
                                   : Colors.indigo.shade50,
@@ -75,7 +75,7 @@ class SettingsScreen extends StatelessWidget {
                           },
                         )
                       : CircleAvatar(
-                          radius: 20,
+                          radius: 22,
                           backgroundColor: isDark
                               ? Colors.grey.shade800
                               : Colors.indigo.shade50,
@@ -97,27 +97,26 @@ class SettingsScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(8),
+                      width: 140,
+                      height: 140,
                       decoration: BoxDecoration(
                         color: isDark
                             ? Colors.grey.shade800
-                            : Colors.indigo.shade50,
+                            : Colors.indigo.shade100,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.indigo.withOpacity(0.1),
+                            color: Colors.indigo.withAlpha(40),
                             blurRadius: 20,
                             offset: const Offset(0, 5),
                           ),
                         ],
                       ),
-                      child: Icon(
-                        Icons.newspaper_rounded,
-                        size: 60,
-                        color: isDark ? Colors.white : Colors.indigo,
-                      ),
+
+                      child: Image.asset("assets/logo.png", fit: BoxFit.cover),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Text(
                       "News App",
                       style: TextStyle(
@@ -150,7 +149,7 @@ class SettingsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
+                      color: Colors.black.withAlpha(isDark ? 2 : 30),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -293,7 +292,7 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: textColor.withOpacity(0.5)),
+          side: BorderSide(color: textColor.withAlpha(200)),
         ),
         backgroundColor: bgColor,
       ),
@@ -314,7 +313,7 @@ class SettingsScreen extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          color: textColor.withOpacity(0.8),
+          color: textColor.withAlpha(200),
           fontSize: 16,
           fontWeight: FontWeight.bold,
           letterSpacing: 1,
@@ -344,7 +343,7 @@ class SettingsScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
+                color: Colors.black.withAlpha(isDark ? 2 : 30),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

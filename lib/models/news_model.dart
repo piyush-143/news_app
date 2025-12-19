@@ -14,13 +14,6 @@ class NewsResponseModel {
           [],
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'totalArticles': totalArticles,
-      'articles': articles.map((e) => e.toJson()).toList(),
-    };
-  }
 }
 
 class Article {
@@ -44,17 +37,28 @@ class Article {
 
   factory Article.fromJson(Map<String, dynamic> json) {
     return Article(
-      // Parsing with null coalescing to ensure app doesn't crash on missing data
       title: json['title'] ?? 'No Title',
       description: json['description'] ?? 'No Description',
-      content: json['content'] ?? '',
+      // Clean the content here
+      content: _cleanContent(json['content']),
       url: json['url'] ?? '',
-      image:
-          json['image'] ??
-          'https://via.placeholder.com/150', // Default placeholder if no image
+      image: json['image'] ?? 'https://via.placeholder.com/150',
       publishedAt: json['publishedAt'] ?? '',
       source: Source.fromJson(json['source'] ?? {}),
     );
+  }
+
+  /// Removes patterns like "[+1234 chars]" or "[326 char]" from the end of the string
+  static String _cleanContent(String? content) {
+    if (content == null) return '';
+    // Regex explanation:
+    // \s* -> Matches zero or more whitespaces
+    // \[        -> Matches literal '['
+    // .*?       -> Matches any character (non-greedy) to capture the number/symbol
+    // chars?    -> Matches 'char' or 'chars'
+    // \]        -> Matches literal ']'
+    // $         -> Ensures it matches at the end of the string
+    return content.replaceAll(RegExp(r'\s*\[.*?chars?\]$'), '');
   }
 
   Map<String, dynamic> toJson() {
@@ -77,10 +81,7 @@ class Source {
   Source({required this.name, required this.url});
 
   factory Source.fromJson(Map<String, dynamic> json) {
-    return Source(
-      name: json['name'] ?? 'Unknown Source',
-      url: json['url'] ?? '',
-    );
+    return Source(name: json['name'] ?? 'Unknown', url: json['url'] ?? '');
   }
 
   Map<String, dynamic> toJson() {

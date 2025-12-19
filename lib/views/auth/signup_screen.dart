@@ -114,11 +114,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.newspaper_rounded,
-                      size: 100,
-                      color: isDark ? Colors.white : Colors.indigo,
-                    ),
+                    Image.asset("assets/logo.png", width: 140, height: 140),
                     const SizedBox(height: 20),
                     const Text(
                       "Create Account",

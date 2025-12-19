@@ -1,8 +1,11 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:news_app/view_models/index_view_model.dart';
 import 'package:news_app/view_models/news_view_model.dart';
 import 'package:news_app/views/home/see_all_screen.dart';
 import 'package:news_app/widgets/custom_loader.dart';
 import 'package:provider/provider.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../../models/news_model.dart';
 import '../../services/utils/app_urls.dart';
@@ -18,11 +21,12 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black;
+    // Unused textColor variable removed
 
     final newsProvider = context.watch<NewsViewModel>();
+    final indexProvider = context.watch<IndexViewModel>();
 
-    final selectedCategoryIndex = newsProvider.selectedCategoryIndex;
+    final selectedCategoryIndex = indexProvider.selectedCategoryIndex;
     final selectedCategoryName = newsProvider.categories[selectedCategoryIndex];
 
     final categoryNewsModel = newsProvider.getNewsByCategory(
@@ -65,7 +69,7 @@ class HomeScreen extends StatelessWidget {
                   final category = newsProvider.categories[index];
                   return GestureDetector(
                     onTap: () {
-                      context.read<NewsViewModel>().setSelectedCategoryIndex(
+                      context.read<IndexViewModel>().setSelectedCategoryIndex(
                         index,
                       );
 
@@ -73,7 +77,7 @@ class HomeScreen extends StatelessWidget {
                       if (newsProvider.getNewsByCategory(category) == null) {
                         String url;
                         String key = category.toLowerCase();
-                        // Simple mapping (Assuming keys match what's in AppUrls mostly)
+                        // Simple mapping
                         if (key == 'tech') {
                           url = AppUrls.technology;
                         } else if (key == 'health') {
@@ -125,18 +129,56 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             if (featuredNews != null) ...[
-              if (featuredNews.articles.isNotEmpty)
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          DetailScreen(news: featuredNews.articles.first),
+              if (featuredNews.articles.isNotEmpty) ...[
+                CarouselSlider.builder(
+                  itemCount: featuredNews.articles.length > 5
+                      ? 5
+                      : featuredNews.articles.length,
+                  itemBuilder: (context, index, realIndex) {
+                    return GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              DetailScreen(news: featuredNews.articles[index]),
+                        ),
+                      ),
+                      child: FeaturedNewsCard(
+                        news: featuredNews.articles[index],
+                      ),
+                    );
+                  },
+                  options: CarouselOptions(
+                    initialPage: indexProvider.sliderIndex,
+                    height: 420,
+                    autoPlay: true,
+                    autoPlayInterval: const Duration(seconds: 3),
+                    viewportFraction: 1,
+                    enableInfiniteScroll: true,
+                    onPageChanged: (index, reason) {
+                      indexProvider.setSliderIndex(index);
+                    },
+                  ),
+                ),
+                SizedBox(height: 15),
+                Center(
+                  child: AnimatedSmoothIndicator(
+                    activeIndex: indexProvider.sliderIndex,
+                    count: featuredNews.articles.length > 5
+                        ? 5
+                        : featuredNews.articles.length,
+                    duration: const Duration(milliseconds: 500),
+                    effect: WormEffect(
+                      activeDotColor: isDark ? Colors.white : Colors.indigo,
+                      dotColor: isDark
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade300,
+                      dotWidth: 17,
+                      dotHeight: 17,
                     ),
                   ),
-                  child: FeaturedNewsCard(news: featuredNews.articles.first),
-                )
-              else
+                ),
+              ] else
                 const Text("No featured news available"),
             ] else if (featuredError != null) ...[
               _buildErrorWidget(context, featuredError, () {
@@ -196,7 +238,6 @@ class HomeScreen extends StatelessWidget {
                 data: categoryNewsModel,
                 error: listError,
                 onRetry: () {
-                  // Retry logic mirrors lazy fetch logic
                   String url;
                   String key = selectedCategoryName.toLowerCase();
                   if (key == 'tech') {

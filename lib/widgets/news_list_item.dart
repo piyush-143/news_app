@@ -12,9 +12,9 @@ class NewsListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15, top: 10),
-
       child: Row(
         children: [
+          // Unique tag for animation
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Image.network(
@@ -22,8 +22,15 @@ class NewsListItem extends StatelessWidget {
               width: 100,
               height: 100,
               fit: BoxFit.cover,
-              errorBuilder: (c, o, s) =>
-                  Container(width: 100, height: 100, color: Colors.grey),
+              errorBuilder: (c, o, s) => Container(
+                width: 100,
+                height: 100,
+                decoration: const BoxDecoration(
+                  color: Colors.grey,
+                  // Optional fallback
+                  // image: DecorationImage(image: AssetImage("assets/no_img.png"), fit: BoxFit.cover),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -32,7 +39,7 @@ class NewsListItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  news.source.name, // Ideally pass this or derive from source
+                  news.source.name,
                   style: TextStyle(
                     color: Colors.blueAccent.shade200,
                     fontSize: 12,
@@ -42,7 +49,7 @@ class NewsListItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  news.title + "...",
+                  "${news.title}...",
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
