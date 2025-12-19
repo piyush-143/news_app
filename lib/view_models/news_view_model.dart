@@ -4,7 +4,7 @@ import 'package:news_app/services/news_services.dart';
 import '../models/news_model.dart';
 
 class NewsViewModel with ChangeNotifier {
-  final NewsServices _newsServices = NewsServices();
+  final NewsServices _newsServices = NewsServices.instance;
 
   // --- State Variables ---
   NewsResponseModel? _featuredNewsList,

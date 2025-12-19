@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeViewModel extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.light;
-  static const String _themeKey = "is_dark_mode";
+  // Constants
+  static const String _prefThemeKey = "is_dark_mode";
 
+  // --- State ---
+  ThemeMode _themeMode = ThemeMode.light;
+
+  // --- Getters ---
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
 
@@ -14,19 +18,34 @@ class ThemeViewModel extends ChangeNotifier {
 
   /// Load saved theme preference on startup
   Future<void> _loadTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Default to false (Light Mode) if no preference is saved
-    final isDark = prefs.getBool(_themeKey) ?? false;
-    _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
-    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Default to Light Mode (false) if no preference is found
+      final isDark = prefs.getBool(_prefThemeKey) ?? false;
+
+      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+      notifyListeners();
+    } catch (e) {
+      // If SP fails, default to light mode and don't crash
+      debugPrint("ThemeViewModel Error loading theme: $e");
+    }
   }
 
   /// Toggle and save theme preference
   Future<void> toggleTheme(bool isDark) async {
-    _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
-    notifyListeners(); // Update UI immediately
+    // OPTIMIZATION: Prevent unnecessary rebuilds if state is identical
+    if (isDark == isDarkMode) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_themeKey, isDark); // Persist to storage
+    // Optimistic Update: Update UI immediately before saving to disk
+    // This makes the toggle feel instant.
+    _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefThemeKey, isDark);
+    } catch (e) {
+      debugPrint("ThemeViewModel Error saving theme: $e");
+    }
   }
 }

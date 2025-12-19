@@ -1,5 +1,6 @@
 class AppUrls {
-  // // Key 1: piyush137.yt@gmail,com
+  AppUrls._();
+  // Key 1: piyush137.yt@gmail,com
   static const String apiKey1 = "f30ea56f80960f899e470e0224104153";
   // Key 2: piyushdewangan218@gmail.com
   static const String apiKey2 = "83bd6d4f8b3a36967e6c25322312c919";

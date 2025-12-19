@@ -16,18 +16,16 @@ class ArticleWebView extends StatefulWidget {
 
 class _ArticleWebViewState extends State<ArticleWebView> {
   WebViewController? _controller;
-  bool _isLoading = true;
-  String? _errorMessage;
+  double _loadingProgress = 0.0;
+  bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
-    // FIX: Delay initialization to prevent "BLASTBufferQueue" errors during screen transition
-    // This ensures the navigation animation finishes before the heavy SurfaceView loads.
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        _initializeWebView();
-      }
+    // Optimization: Initialize after the frame to ensure smooth navigation transition
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Small delay to let the page transition animation finish (prevents jank)
+      Future.delayed(const Duration(milliseconds: 200), _initializeWebView);
     });
   }
 
@@ -36,72 +34,132 @@ class _ArticleWebViewState extends State<ArticleWebView> {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final backgroundColor = isDark ? Colors.black : Colors.white;
 
-      _controller = WebViewController()
+      final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        // FIX: Use opaque background instead of transparent to fix buffer rendering issues
         ..setBackgroundColor(backgroundColor)
         ..setNavigationDelegate(
           NavigationDelegate(
+            onProgress: (int progress) {
+              if (mounted) {
+                setState(() {
+                  _loadingProgress = progress / 100;
+                });
+              }
+            },
             onPageStarted: (String url) {
-              if (mounted) setState(() => _isLoading = true);
+              if (mounted) {
+                setState(() {
+                  _hasError = false;
+                  _loadingProgress = 0.1; // Start progress
+                });
+              }
             },
             onPageFinished: (String url) {
-              if (mounted) setState(() => _isLoading = false);
+              if (mounted) {
+                setState(() {
+                  _loadingProgress = 1.0; // Complete
+                });
+              }
             },
             onWebResourceError: (WebResourceError error) {
               if (kDebugMode) {
                 print("WebView Error: ${error.description}");
+              }
+              // Only block UI for critical main-frame errors
+              if (error.errorType == WebResourceErrorType.connect ||
+                  error.errorType == WebResourceErrorType.hostLookup ||
+                  error.errorType == WebResourceErrorType.timeout) {
+                if (mounted) setState(() => _hasError = true);
               }
             },
           ),
         )
         ..loadRequest(Uri.parse(widget.url));
 
-      // Trigger rebuild to show the WebView now that controller is ready
-      setState(() {});
+      if (mounted) {
+        setState(() => _controller = controller);
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage =
-            "Unable to initialize WebView.\nPlease restart the app fully to load native plugins.\n\nError: $e";
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _hasError = true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title, style: const TextStyle(fontSize: 20)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title, style: const TextStyle(fontSize: 16)),
+            Text(
+              widget.url,
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
         titleSpacing: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 1,
         leading: IconButton(
-          icon: Icon(Icons.close, color: Theme.of(context).iconTheme.color),
+          icon: Icon(Icons.close, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Refresh Button
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              _controller?.reload();
+            },
+          ),
+        ],
       ),
-      body: _errorMessage != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Text(
-                  _errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            )
-          : Stack(
-              children: [
-                // Only show WebViewWidget when controller is initialized
-                if (_controller != null)
-                  WebViewWidget(controller: _controller!),
+      body: Stack(
+        children: [
+          // 1. WebView (Content)
+          if (_controller != null && !_hasError)
+            WebViewWidget(controller: _controller!),
 
-                if (_isLoading || _controller == null)
-                  const Center(child: CustomLoader(size: 40)),
-              ],
+          // 2. Error State
+          if (_hasError)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 50, color: Colors.red),
+                  const SizedBox(height: 10),
+                  const Text("Failed to load article"),
+                  TextButton(
+                    onPressed: () => _controller?.reload(),
+                    child: const Text("Retry"),
+                  ),
+                ],
+              ),
             ),
+
+          // 3. Initial Loading Spinner (Before Controller is ready)
+          if (_controller == null && !_hasError)
+            const Center(child: CustomLoader(size: 40)),
+
+          // 4. Linear Progress Bar (During Page Load)
+          if (_loadingProgress < 1.0 && _controller != null)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(
+                value: _loadingProgress,
+                backgroundColor: Colors.transparent,
+                color: Colors.indigo,
+                minHeight: 3,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

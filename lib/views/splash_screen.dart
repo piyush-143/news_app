@@ -25,11 +25,12 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkAuthAndNavigate() async {
     // 1. Check existing session
     final dbViewModel = context.read<DbViewModel>();
-    await dbViewModel.checkSession();
+    final sessionCheck = dbViewModel.checkSession();
+    final minSplashTime = Future.delayed(const Duration(seconds: 3));
 
     // 2. Wait for splash animation (optional branding time)
     // Changed back to 3 seconds for standard splash duration (300s is too long)
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.wait([minSplashTime, sessionCheck]);
 
     if (!mounted) return;
 
@@ -86,8 +87,14 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
                 child: Image.asset(
                   "assets/logo.png",
-                  fit: BoxFit
-                      .contain, // Contain ensures the logo isn't cropped awkwardly
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.newspaper_rounded,
+                      size: 80,
+                      color: Colors.indigo,
+                    );
+                  }, // Contain ensures the logo isn't cropped awkwardly
                 ),
               ),
               const SizedBox(height: 30),

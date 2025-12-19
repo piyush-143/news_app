@@ -1,45 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:news_app/services/url_launch_service.dart';
 
 import '../../models/news_model.dart';
 import '../../services/utils/date_formatter.dart';
-import '../../widgets/custom_snack_bar.dart';
-import 'article_web_view.dart';
 
 class DetailScreen extends StatelessWidget {
   final Article news;
   const DetailScreen({super.key, required this.news});
-
-  void _openArticle(BuildContext context, String url) {
-    final platform = Theme.of(context).platform;
-
-    if (platform == TargetPlatform.android || platform == TargetPlatform.iOS) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              ArticleWebView(url: url, title: news.source.name),
-        ),
-      );
-    } else {
-      _launchExternalUrl(context, url);
-    }
-  }
-
-  Future<void> _launchExternalUrl(BuildContext context, String url) async {
-    try {
-      final Uri uri = Uri.parse(url);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        if (context.mounted) {
-          CustomSnackBar.showError(context, 'Could not open article link');
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        CustomSnackBar.showError(context, 'Error launching URL');
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,8 +48,13 @@ class DetailScreen extends StatelessWidget {
                       Image.network(
                         news.image,
                         fit: BoxFit.cover,
-                        errorBuilder: (c, o, s) =>
-                            Container(color: Colors.grey),
+                        errorBuilder: (c, o, s) => Container(
+                          decoration: BoxDecoration(
+                            image: DecorationImage(
+                              image: AssetImage("assets/no_img.png"),
+                            ),
+                          ),
+                        ),
                       ),
                       // Gradient overlay for better text contrast if we had title here
                       const DecoratedBox(
@@ -225,7 +197,11 @@ class DetailScreen extends StatelessWidget {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () => _openArticle(context, news.url),
+                onPressed: () => UrlLaunchService.openArticle(
+                  context,
+                  news.url,
+                  news.source.name,
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeColor,
                   foregroundColor: Colors.white,

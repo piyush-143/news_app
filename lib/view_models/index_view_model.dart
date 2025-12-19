@@ -27,4 +27,12 @@ class IndexViewModel with ChangeNotifier {
     _selectedCategoryIndex = index;
     notifyListeners();
   }
+
+  // call before exiting the app
+  void reset() {
+    _currentTabIndex = 0;
+    _sliderIndex = 0;
+    _selectedCategoryIndex = 0;
+    notifyListeners();
+  }
 }

@@ -10,6 +10,7 @@ import 'package:news_app/views/splash_screen.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   // Overrides for development (e.g., handling self-signed certificates)
   HttpOverrides.global = MyHttpOverrides();
 

@@ -114,7 +114,19 @@ class SettingsScreen extends StatelessWidget {
                         ],
                       ),
 
-                      child: Image.asset("assets/logo.png", fit: BoxFit.cover),
+                      child: Image.asset(
+                        "assets/logo.png",
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.newspaper_rounded,
+                            size: 60,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.indigo,
+                          );
+                        },
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(

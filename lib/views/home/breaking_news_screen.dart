@@ -6,14 +6,9 @@ import '../../services/utils/app_urls.dart';
 import '../../widgets/custom_loader.dart';
 import 'detail_screen.dart';
 
-class BreakingScreen extends StatefulWidget {
+class BreakingScreen extends StatelessWidget {
   const BreakingScreen({super.key});
 
-  @override
-  State<BreakingScreen> createState() => _BreakingScreenState();
-}
-
-class _BreakingScreenState extends State<BreakingScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -104,8 +99,14 @@ class _BreakingScreenState extends State<BreakingScreen> {
                           height: 200,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          errorBuilder: (c, o, s) =>
-                              Container(height: 200, color: Colors.grey),
+                          errorBuilder: (c, o, s) => Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              image: DecorationImage(
+                                image: AssetImage("assets/no_img.png"),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],

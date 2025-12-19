@@ -181,7 +181,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ... (rest of the build method same as before)
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final dbVM = context.watch<DbViewModel>();
     final email = dbVM.currentUserEmail ?? "Guest";

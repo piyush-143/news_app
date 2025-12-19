@@ -19,11 +19,11 @@ class CategoryPill extends StatelessWidget {
         : (isDark ? Colors.white : Colors.black);
 
     return Container(
-      margin: const EdgeInsets.only(right: 5, left: 5, bottom: 0),
+      margin: const EdgeInsets.symmetric(horizontal: 5),
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(100),
         border: isSelected
             ? null
             : Border.all(
