@@ -37,11 +37,17 @@ android {
 
     defaultConfig {
         applicationId = "com.example.news_app"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        // ADD THIS BLOCK TO REMOVE x86 (EMULATOR) FILES
+        ndk {
+            // Only package for physical Android phones
+            abiFilters.add("armeabi-v7a")
+            abiFilters.add("arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -53,11 +59,12 @@ android {
 
     // Rename the output APK
     applicationVariants.all {
-        // FIXED: Removed unused 'val variant = this'
         outputs
             .map { it as com.android.build.gradle.internal.api.ApkVariantOutputImpl }
             .forEach { output ->
-                output.outputFileName = "News App.apk"
+
+                    output.outputFileName = "News App.apk"
+
             }
     }
 }
