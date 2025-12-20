@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
-import 'package:news_app/views/home/trending_news_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/utils/app_urls.dart';
 import '../../view_models/index_view_model.dart';
 import '../../view_models/news_view_model.dart';
+import '../home/trending_news_screen.dart';
 import 'breaking_news_screen.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
 
+/// The "Shell" of the application.
+/// Manages Bottom Navigation, Android Back Button logic, and Initial Data Fetching.
 class MainWrapper extends StatefulWidget {
   const MainWrapper({super.key});
 
@@ -23,12 +25,8 @@ class _MainWrapperState extends State<MainWrapper> {
   void initState() {
     super.initState();
 
-    // OPTIMIZATION: Only fetch critical "Home" data on startup.
-    // Fetching 13 categories at once triggers API Rate Limits (429) and wastes data.
-    // Other screens (Trending/Breaking) should fetch their own data in their initState.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = context.read<NewsViewModel>();
-      // Key 1 fetching
 
       vm.getNews(AppUrls.featured, "featured");
       vm.getNews(AppUrls.trending, "trending");
@@ -46,7 +44,7 @@ class _MainWrapperState extends State<MainWrapper> {
     });
   }
 
-  // Const pages to prevent unnecessary re-instantiation
+  // Define screens as const where possible to prevent unnecessary rebuilding
   final List<Widget> _pages = const [
     HomeScreen(),
     TrendingScreen(),
@@ -54,19 +52,22 @@ class _MainWrapperState extends State<MainWrapper> {
     SettingsScreen(),
   ];
 
+  /// Handles Android physical back button behavior.
+  /// 1. If not on Home Tab -> Go to Home Tab.
+  /// 2. If on Home Tab -> Show Exit Dialog.
   Future<void> _handleBackPress() async {
     final indexVM = context.read<IndexViewModel>();
 
-    // If not on Home tab, go back to Home first
     if (indexVM.currentTabIndex != 0) {
-      indexVM.setTabIndex(0);
+      indexVM.setTabIndex(0); // Navigate to Home
       return;
     }
 
-    // If on Home tab, confirm exit
+    // Confirm before closing the app
     final shouldExit = await _showExitDialog(context);
     if (shouldExit == true) {
-      SystemNavigator.pop();
+      indexVM.reset(); // Resets all the index to 0
+      SystemNavigator.pop(); // Close App
     }
   }
 
@@ -74,14 +75,16 @@ class _MainWrapperState extends State<MainWrapper> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // PopScope intercepts the system back button
     return PopScope(
-      canPop: false,
+      canPop: false, // Disable default pop to handle it manually
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         _handleBackPress();
       },
       child: Scaffold(
-        // Optimization: Consumer allows us to listen to tab changes specifically
+        // IndexedStack preserves the state (scroll position) of each tab
+        // so it doesn't reset when switching tabs.
         body: Consumer<IndexViewModel>(
           builder: (context, indexVM, child) {
             return IndexedStack(
@@ -95,7 +98,7 @@ class _MainWrapperState extends State<MainWrapper> {
           child: Padding(
             padding: const EdgeInsets.only(
               left: 15.0,
-              bottom: 30,
+              bottom: 30, // Extra padding for modern gesture bars
               right: 15,
               top: 10,
             ),
@@ -109,7 +112,7 @@ class _MainWrapperState extends State<MainWrapper> {
                   activeColor: isDark ? Colors.white : Colors.indigo,
                   tabBackgroundColor: isDark
                       ? Colors.grey.shade800
-                      : Colors.indigo.withOpacity(0.1), // Modern opacity syntax
+                      : Colors.indigo.withOpacity(0.1),
                   gap: 8,
                   padding: const EdgeInsets.all(16),
                   selectedIndex: indexVM.currentTabIndex,
@@ -131,7 +134,7 @@ class _MainWrapperState extends State<MainWrapper> {
     );
   }
 
-  // Extracted logic to keep the main class clean
+  /// Displays a styled confirmation dialog before exiting.
   Future<bool?> _showExitDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -148,6 +151,7 @@ class _MainWrapperState extends State<MainWrapper> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Warning Icon
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -161,6 +165,8 @@ class _MainWrapperState extends State<MainWrapper> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // Title
                 Text(
                   "Exit App",
                   style: TextStyle(
@@ -170,6 +176,8 @@ class _MainWrapperState extends State<MainWrapper> {
                   ),
                 ),
                 const SizedBox(height: 8),
+
+                // Message
                 Text(
                   "Are you sure you want to close the application?",
                   textAlign: TextAlign.center,
@@ -179,6 +187,8 @@ class _MainWrapperState extends State<MainWrapper> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Action Buttons
                 Row(
                   children: [
                     Expanded(

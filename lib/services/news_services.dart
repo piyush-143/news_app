@@ -1,4 +1,4 @@
-import 'dart:async'; // Required for TimeoutException
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,13 +6,14 @@ import 'package:http/http.dart' as http;
 import 'package:news_app/models/news_model.dart';
 
 class NewsServices {
-  // Singleton Pattern
+  // Private constructor to enforce Singleton pattern (only one instance exists)
   NewsServices._();
   static final NewsServices instance = NewsServices._();
 
-  // Timeout duration for requests
+  // Limit request duration to 20 seconds
   static const Duration _timeout = Duration(seconds: 20);
 
+  /// Fetches news data from the [url] with retry logic and error handling.
   Future<NewsResponseModel> fetchNews(String url) async {
     const int maxAttempts = 3;
     int attempt = 0;
@@ -22,31 +23,31 @@ class NewsServices {
       try {
         final uri = Uri.parse(url);
 
-        // Added timeout to prevent app hanging on slow connections
+        // Make the request with a strict timeout
         final response = await http.get(uri).timeout(_timeout);
 
         if (response.statusCode == 200) {
           return NewsResponseModel.fromJson(jsonDecode(response.body));
         }
 
-        // OPTIMIZATION: Don't retry Client Errors (4xx) except 429.
-        // A 404 or 401 will not fix itself on retry. Fail fast.
+        // Fail immediately on Client Errors (4xx) except for Rate Limits (429).
+        // 4xx errors usually mean the request URL or params are wrong, so retrying won't help.
         if (response.statusCode >= 400 &&
             response.statusCode < 500 &&
             response.statusCode != 429) {
           throw _handleStatusCode(response.statusCode);
         }
 
-        // If it's the last attempt, throw the error
+        // If this was the last attempt, stop and throw the error.
         if (attempt == maxAttempts) {
           throw _handleStatusCode(response.statusCode);
         }
 
-        // If Server Error (5xx) or Rate Limit (429), wait and retry.
-        // Exponential backoff: 2s, 4s...
+        // Exponential Backoff: Wait longer between retries (2s, 4s, etc.)
+        // to give the server time to recover.
         await Future.delayed(Duration(seconds: attempt * 2));
       } on SocketException {
-        // Network error (No Internet)
+        // Handle Network Errors (No Internet)
         if (attempt == maxAttempts) {
           throw const SocketException(
             "No Internet Connection. Please check your data or wifi.",
@@ -54,7 +55,7 @@ class NewsServices {
         }
         await Future.delayed(Duration(seconds: attempt * 2));
       } on TimeoutException {
-        // Connection Timed out
+        // Handle Request Timeouts
         if (attempt == maxAttempts) {
           throw const SocketException(
             "Connection Timed out. Server is taking too long to respond.",
@@ -62,7 +63,7 @@ class NewsServices {
         }
         await Future.delayed(Duration(seconds: attempt * 2));
       } catch (e) {
-        // Any other unknown error
+        // Handle unexpected errors
         if (attempt == maxAttempts) rethrow;
         await Future.delayed(const Duration(seconds: 1));
       }
@@ -71,7 +72,7 @@ class NewsServices {
     throw const SocketException("Unexpected error occurred.");
   }
 
-  // Extracted error mapping for cleaner code
+  /// Converts HTTP status codes into user-friendly error messages.
   SocketException _handleStatusCode(int statusCode) {
     switch (statusCode) {
       case 400:

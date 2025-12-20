@@ -7,6 +7,11 @@ import '../../services/db_service.dart';
 import '../../view_models/db_view_model.dart';
 import '../../widgets/custom_snack_bar.dart';
 
+/// Screen to view and edit the current user's profile details.
+/// Features:
+/// 1. Profile Picture upload/change.
+/// 2. Name and Email editing.
+/// 3. Real-time updates from the local SQLite database.
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
 
@@ -15,8 +20,10 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
+  // Temporary storage to pre-fill the edit dialog
   String? _currentName;
 
+  /// Displays a popup dialog allowing the user to modify their Name and Email.
   void _showEditDialog(
     BuildContext context,
     String currentName,
@@ -27,9 +34,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final emailController = TextEditingController(text: currentEmail);
     final formKey = GlobalKey<FormState>();
 
+    // Theme-dependent colors for the dialog
     final dialogBgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black;
-    final inputFillColor = isDark ? Colors.white12 : Colors.grey.shade50;
+    final inputFillColor = isDark ? Colors.white12 : Colors.grey.shade200;
 
     showDialog(
       context: context,
@@ -55,7 +63,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     controller: nameController,
                     label: "Name",
                     icon: Icons.person_outline,
-                    isDark: isDark,
                     fillColor: inputFillColor,
                     textColor: textColor,
                   ),
@@ -64,7 +71,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     controller: emailController,
                     label: "Email",
                     icon: Icons.email_outlined,
-                    isDark: isDark,
                     fillColor: inputFillColor,
                     textColor: textColor,
                     maxLines: 2,
@@ -75,6 +81,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
           actionsPadding: const EdgeInsets.only(bottom: 20, right: 20),
           actions: [
+            // Cancel Button
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
@@ -85,25 +92,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
               ),
             ),
+            // Save Button
             ElevatedButton(
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
                   final dbVM = context.read<DbViewModel>();
+
+                  // Attempt to update in DB
                   final success = await dbVM.updateProfile(
                     nameController.text.trim(),
                     emailController.text.trim(),
                   );
 
+                  // Async Safety: Check if widget is mounted before using context
                   if (context.mounted) {
                     Navigator.pop(context); // Close dialog
+
                     if (success) {
-                      // Use CustomSnackBar
                       CustomSnackBar.showSuccess(
                         context,
                         "Profile updated successfully",
                       );
                     } else {
-                      // Use CustomSnackBar
+                      // This usually happens if the new email is already taken by another user
                       CustomSnackBar.showError(
                         context,
                         "Update failed. Email might be taken.",
@@ -131,11 +142,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  /// Helper widget for consistent text fields inside the dialog
   TextFormField _buildDialogTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    required bool isDark,
     required Color fillColor,
     required Color textColor,
     int maxLines = 1,
@@ -167,13 +178,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  /// Triggers the image picker in the ViewModel
   Future<void> _pickImage(BuildContext context) async {
     final dbVM = context.read<DbViewModel>();
     final success = await dbVM.updateProfilePicture();
 
     if (context.mounted) {
       if (success) {
-        // Use CustomSnackBar
         CustomSnackBar.showSuccess(context, "Profile picture updated");
       }
     }
@@ -182,9 +193,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Watch for changes (e.g., if email is updated, this triggers a rebuild)
     final dbVM = context.watch<DbViewModel>();
     final email = dbVM.currentUserEmail ?? "Guest";
-    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade50;
+
+    // Theme Colors
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade200;
     final textColor = isDark ? Colors.white : Colors.black;
 
     return Scaffold(
@@ -193,6 +208,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         titleSpacing: 0,
         actionsPadding: const EdgeInsets.only(right: 15),
         actions: [
+          // Edit Button in AppBar
           IconButton(
             onPressed: () {
               _showEditDialog(context, _currentName ?? "", email, isDark);
@@ -212,6 +228,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
+        // FutureBuilder ensures we fetch the absolute latest data from SQLite
+        // every time the UI rebuilds.
         child: FutureBuilder<Map<String, dynamic>?>(
           future: DbService.getInstance.getUserDetails(email),
           builder: (context, snapshot) {
@@ -219,6 +237,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             _currentName = data?['Name'];
             final String? imagePath = data?['Image'];
 
+            // Handle loading vs data state for the Name display
             final displayTitle = snapshot.hasData
                 ? (_currentName ?? "No Name")
                 : (snapshot.connectionState == ConnectionState.waiting
@@ -228,10 +247,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             return Column(
               children: [
                 const SizedBox(height: 20),
+
+                // --- Profile Image Section ---
                 Center(
+                  // Stack allows us to place the "Camera Icon" on top of the Avatar
                   child: Stack(
                     alignment: Alignment.bottomRight,
                     children: [
+                      // The Main Avatar
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
@@ -260,6 +283,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               : null,
                         ),
                       ),
+
+                      // The Edit/Camera Badge
                       GestureDetector(
                         onTap: () => _pickImage(context),
                         child: Container(
@@ -291,7 +316,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 40),
+
+                // --- Info Tiles ---
                 _buildInfoTile(
                   "Full Name",
                   displayTitle,
@@ -315,6 +343,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  /// Reusable widget for displaying user details (Name, Email)
   Widget _buildInfoTile(
     String label,
     String value,

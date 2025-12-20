@@ -6,13 +6,20 @@ import '../../services/utils/app_urls.dart';
 import '../../widgets/custom_loader.dart';
 import 'detail_screen.dart';
 
+/// A dedicated screen for "Breaking News" updates.
+/// Uses a distinct red color scheme to emphasize urgency and separates content
+/// from the main feed.
 class BreakingScreen extends StatelessWidget {
   const BreakingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Watch the provider to rebuild UI when new data arrives
     final newsProvider = context.watch<NewsViewModel>();
+
+    // Check for errors specific to the 'breaking' category
     final breakingError = newsProvider.getErrorForCategory("breaking");
 
     return Scaffold(
@@ -20,12 +27,15 @@ class BreakingScreen extends StatelessWidget {
         titleSpacing: 24,
         title: Row(
           children: [
+            // Visual indicator (Red Dot) for "Live/Breaking" feel
             const Icon(Icons.circle, color: Colors.red, size: 12),
             const SizedBox(width: 8),
             Text("Breaking News", style: TextStyle(color: Colors.red.shade400)),
           ],
         ),
       ),
+      // --- Conditional Rendering State Machine ---
+      // 1. DATA EXISTS: Show List
       body: newsProvider.breakingNews != null
           ? ListView.separated(
               padding: const EdgeInsets.all(24),
@@ -37,13 +47,11 @@ class BreakingScreen extends StatelessWidget {
                 ),
               ),
               itemBuilder: (context, index) {
-                final news =
-                    newsProvider.breakingNews!.articles[newsProvider
-                            .breakingNews!
-                            .articles
-                            .length -
-                        1 -
-                        index];
+                // LOGIC: Accessing items in reverse order.
+                // Assuming the API returns [Oldest ... Newest] or we want to flip the display sequence.
+                final articleIndex =
+                    newsProvider.breakingNews!.articles.length - 1 - index;
+                final news = newsProvider.breakingNews!.articles[articleIndex];
 
                 return GestureDetector(
                   onTap: () => Navigator.push(
@@ -53,6 +61,7 @@ class BreakingScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // "LIVE UPDATES" Tag
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -72,6 +81,8 @@ class BreakingScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
+
+                      // Headline
                       Text(
                         news.title,
                         style: const TextStyle(
@@ -81,6 +92,8 @@ class BreakingScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
+
+                      // Subtitle / Snippet
                       Text(
                         "Detailed coverage regarding ${news.source.name.toUpperCase()}...",
                         style: TextStyle(
@@ -92,6 +105,8 @@ class BreakingScreen extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 16),
+
+                      // Large Feature Image
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: Image.network(
@@ -101,9 +116,10 @@ class BreakingScreen extends StatelessWidget {
                           fit: BoxFit.cover,
                           errorBuilder: (c, o, s) => Container(
                             height: 200,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               image: DecorationImage(
                                 image: AssetImage("assets/no_img.png"),
+                                fit: BoxFit.cover,
                               ),
                             ),
                           ),
@@ -114,6 +130,7 @@ class BreakingScreen extends StatelessWidget {
                 );
               },
             )
+          // 2. ERROR STATE: Show Error Message & Retry Button
           : breakingError != null
           ? Center(
               child: Column(
@@ -132,6 +149,7 @@ class BreakingScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
+                      // Trigger fetch specifically for 'breaking' category
                       context.read<NewsViewModel>().getNews(
                         AppUrls.breaking,
                         "breaking",
@@ -142,6 +160,7 @@ class BreakingScreen extends StatelessWidget {
                 ],
               ),
             )
+          // 3. LOADING STATE: Show Spinner
           : Center(child: CustomLoader(color: Colors.red.shade400, size: 50.0)),
     );
   }

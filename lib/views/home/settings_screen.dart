@@ -10,15 +10,23 @@ import '../../widgets/custom_snack_bar.dart';
 import '../auth/login_screen.dart';
 import '../profile/user_profile_screen.dart';
 
+/// The Settings screen allows users to:
+/// 1. Toggle Dark/Light Mode.
+/// 2. Manage their account (Login/Logout/Profile).
+/// 3. Access static pages (Privacy, Help).
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Define shared colors for consistency
     final textColor = isDark ? Colors.white : Colors.black;
     final iconColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final tileBgColor = isDark ? Colors.grey.shade900 : Colors.white;
 
+    // Consumer2 allows us to listen to BOTH Theme changes and Auth changes
     return Consumer2<ThemeViewModel, DbViewModel>(
       builder: (context, themeVM, dbVM, child) {
         return Scaffold(
@@ -26,6 +34,7 @@ class SettingsScreen extends StatelessWidget {
             titleSpacing: 24,
             title: const Text("Settings"),
             actions: [
+              // --- Profile Icon in AppBar ---
               Padding(
                 padding: const EdgeInsets.only(right: 24.0),
                 child: GestureDetector(
@@ -45,6 +54,9 @@ class SettingsScreen extends StatelessWidget {
                     }
                   },
                   child: dbVM.isLoggedIn && dbVM.currentUserEmail != null
+                      // DATA FETCHING: We use a FutureBuilder here to fetch the latest
+                      // image path from SQLite. This ensures that if the user just updated
+                      // their photo, it reflects here immediately without a full app restart.
                       ? FutureBuilder<Map<String, dynamic>?>(
                           future: DbService.getInstance.getUserDetails(
                             dbVM.currentUserEmail!,
@@ -92,7 +104,7 @@ class SettingsScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             children: [
-              // --- App Header (Logo) ---
+              // --- 1. Branding Header ---
               Center(
                 child: Column(
                   children: [
@@ -113,7 +125,6 @@ class SettingsScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       child: Image.asset(
                         "assets/logo.png",
                         fit: BoxFit.cover,
@@ -152,12 +163,12 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
 
-              // --- Preferences Section ---
+              // --- 2. Preferences Section ---
               _buildSectionHeader(textColor, "Preferences"),
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.grey.shade900 : Colors.white,
+                  color: tileBgColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -167,6 +178,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                // Dark Mode Toggle
                 child: SwitchListTile(
                   title: Text(
                     "Dark Mode",
@@ -207,10 +219,10 @@ class SettingsScreen extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // --- Support Section ---
+              // --- 3. Support Section ---
               _buildSectionHeader(textColor, "Support"),
+
               _buildOptionTile(
-                context,
                 icon: Icons.help_outline_rounded,
                 title: "Help & Support",
                 isDark: isDark,
@@ -219,7 +231,6 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () => CustomSnackBar.showInfo(context, "Coming Soon!"),
               ),
               _buildOptionTile(
-                context,
                 icon: Icons.policy_outlined,
                 title: "Privacy Policy",
                 isDark: isDark,
@@ -228,7 +239,6 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () => CustomSnackBar.showInfo(context, "Coming Soon!"),
               ),
               _buildOptionTile(
-                context,
                 icon: Icons.share_rounded,
                 title: "Share App",
                 isDark: isDark,
@@ -242,7 +252,8 @@ class SettingsScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // --- Conditional Login/Sign Out Button ---
+              // --- 4. Auth Action Button ---
+              // Shows "Sign Out" if logged in, otherwise "Login"
               if (dbVM.isLoggedIn)
                 _buildActionButton(
                   label: "Sign Out",
@@ -278,6 +289,8 @@ class SettingsScreen extends StatelessWidget {
                 ),
 
               const SizedBox(height: 10),
+
+              // Version Info
               Center(
                 child: Text(
                   "Version 1.0.0",
@@ -292,6 +305,8 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // --- Helper Widgets ---
+  //Login/Sign Out Button
   Widget _buildActionButton({
     required String label,
     required Color textColor,
@@ -334,8 +349,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOptionTile(
-    BuildContext context, {
+  Widget _buildOptionTile({
     required IconData icon,
     required String title,
     required bool isDark,

@@ -14,7 +14,6 @@ class NewsListItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 15, top: 10),
       child: Row(
         children: [
-          // Unique tag for animation
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Image.network(
@@ -27,8 +26,11 @@ class NewsListItem extends StatelessWidget {
                 height: 100,
                 decoration: const BoxDecoration(
                   color: Colors.grey,
-                  // Optional fallback
-                  // image: DecorationImage(image: AssetImage("assets/no_img.png"), fit: BoxFit.cover),
+
+                  image: DecorationImage(
+                    image: AssetImage("assets/no_img.png"),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),

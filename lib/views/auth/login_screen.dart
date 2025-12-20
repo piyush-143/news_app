@@ -6,8 +6,10 @@ import '../../view_models/db_view_model.dart';
 import '../../widgets/custom_loader.dart';
 import '../../widgets/custom_snack_bar.dart';
 import '../home/main_controller.dart';
-import 'forgot_password_screen.dart'; // Import Forgot Password Screen
+import 'forgot_password_screen.dart';
 
+/// The primary entry point for users.
+/// Handles Form Validation, Authentication State, and Navigation to the main app.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -17,14 +19,18 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Controllers to retrieve user input
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // FocusNodes help us manage keyboard behavior (e.g., moving next, or closing it)
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
 
   @override
   void dispose() {
+    // Always dispose controllers to prevent memory leaks
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocusNode.dispose();
@@ -32,10 +38,13 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  /// Handles the login submission logic.
   Future<void> _handleLogin() async {
+    // UX: Dismiss the keyboard immediately so the user sees the loading state clearly
     FocusScope.of(context).unfocus();
 
     if (_formKey.currentState!.validate()) {
+      // Access the ViewModel without listening to changes (read-only) for the function call
       final dbVM = context.read<DbViewModel>();
 
       final success = await dbVM.login(
@@ -43,9 +52,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text.trim(),
       );
 
+      // Async Safety: Ensure the widget is still on screen before navigating
       if (!mounted) return;
 
       if (success) {
+        // Use pushReplacement to prevent user from going "back" to the login screen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainWrapper()),
@@ -60,15 +71,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Listen to ViewModel changes to update UI (Loading Spinner, Password Visibility)
     final dbViewModel = context.watch<DbViewModel>();
     final isLoading = dbViewModel.isLoading;
     final isPasswordVisible = dbViewModel.isLoginPasswordVisible;
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false, // Hide back button
         actionsPadding: const EdgeInsets.only(right: 15, top: 10),
         actions: [
+          // --- Guest Mode / Skip Button ---
           TextButton(
             onPressed: () {
               Navigator.pushReplacement(
@@ -89,11 +102,13 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(width: 15),
         ],
       ),
+      // GestureDetector ensures the keyboard closes if the user taps the background
       body: GestureDetector(
         onTap: () {
           FocusScope.of(context).requestFocus(FocusNode());
         },
         child: Center(
+          // SingleChildScrollView prevents "Bottom Overflow" errors when keyboard rises
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -103,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // --- Header Section ---
                     Image.asset("assets/logo.png", width: 140, height: 140),
                     const SizedBox(height: 20),
                     const Text(
@@ -120,6 +136,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
                     const SizedBox(height: 40),
+
+                    // --- Input Fields ---
                     TextFormField(
                       controller: _emailController,
                       focusNode: _emailFocusNode,
@@ -150,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _passwordController,
                       focusNode: _passwordFocusNode,
-                      obscureText: !isPasswordVisible,
+                      obscureText: !isPasswordVisible, // Toggles text masking
                       autofocus: false,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -170,6 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : Icons.visibility_off,
                           ),
                           onPressed: () {
+                            // Toggle state in ViewModel to keep UI logic clean
                             context
                                 .read<DbViewModel>()
                                 .toggleLoginPasswordVisibility();
@@ -187,12 +206,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    // --- Forgot Password Button ---
+                    // --- Forgot Password Link ---
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // Clear focus before navigating
                           FocusScope.of(context).requestFocus(FocusNode());
                           Navigator.push(
                             context,
@@ -212,6 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
+                    // --- Login Action ---
                     const SizedBox(height: 10),
                     ElevatedButton(
                       onPressed: isLoading ? null : _handleLogin,
@@ -233,6 +252,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                     ),
+
+                    // --- Footer / Sign Up Link ---
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

@@ -19,22 +19,28 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // Start the initialization process as soon as the widget mounts
     _checkAuthAndNavigate();
   }
 
+  /// Handles the startup logic: checks for a logged-in user while showing the splash animation.
   Future<void> _checkAuthAndNavigate() async {
-    // 1. Check existing session
+    // 1. Trigger the session check (Data Logic)
     final dbViewModel = context.read<DbViewModel>();
     final sessionCheck = dbViewModel.checkSession();
+
+    // 2. Enforce a minimum display time (UI Logic)
+    // We wait at least 3 seconds so the user can actually see the branding,
+    // avoiding a jarring flicker if the database check is too fast.
     final minSplashTime = Future.delayed(const Duration(seconds: 3));
 
-    // 2. Wait for splash animation (optional branding time)
-    // Changed back to 3 seconds for standard splash duration (300s is too long)
+    // Wait for BOTH the data check and the timer to finish
     await Future.wait([minSplashTime, sessionCheck]);
 
+    // Safety check: Ensure the widget is still on screen before navigating
     if (!mounted) return;
 
-    // 3. Navigate based on auth state
+    // 3. Navigation Decision
     if (dbViewModel.isLoggedIn) {
       Navigator.pushReplacement(
         context,
@@ -51,31 +57,29 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Gradient background for a more modern look
+      // Gradient background gives a more polished, modern look than a flat color
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.indigo,
-              Color(0xFF3F51B5),
-            ], // Indigo to slightly lighter shade
+              Colors.indigo, // Start color
+              Color(0xFF3F51B5), // Slightly lighter indigo
+            ],
           ),
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo Container
+              // --- Logo Section ---
               Container(
-                width: 140, // Slightly larger for better visibility
+                width: 140,
                 height: 140,
-                padding: const EdgeInsets.all(
-                  7,
-                ), // Padding for the logo inside the white circle
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white, // White background to pop against indigo
+                  color: Colors.white, // White background makes the logo pop
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -88,18 +92,19 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: Image.asset(
                   "assets/logo.png",
                   fit: BoxFit.contain,
+                  // Fallback icon in case the asset is missing
                   errorBuilder: (context, error, stackTrace) {
                     return const Icon(
                       Icons.newspaper_rounded,
                       size: 80,
                       color: Colors.indigo,
                     );
-                  }, // Contain ensures the logo isn't cropped awkwardly
+                  },
                 ),
               ),
               const SizedBox(height: 30),
 
-              // App Name
+              // --- App Name ---
               const Text(
                 "News App",
                 style: TextStyle(
@@ -118,7 +123,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Tagline
+              // --- Tagline ---
               const Text(
                 "Discover the Future",
                 style: TextStyle(
@@ -131,12 +136,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
               const SizedBox(height: 60),
 
-              // Loader
-              const SpinKitCubeGrid(
-                // Switched to CubeGrid for that 'news block' feel
-                color: Colors.white,
-                size: 45.0,
-              ),
+              // --- Loading Indicator ---
+              // 'SpinKitCubeGrid' fits the blocky nature of news layouts well
+              const SpinKitCubeGrid(color: Colors.white, size: 45.0),
             ],
           ),
         ),

@@ -5,6 +5,9 @@ import '../../view_models/db_view_model.dart';
 import '../../widgets/custom_loader.dart';
 import '../../widgets/custom_snack_bar.dart';
 
+/// A screen that handles the password recovery process in two distinct stages:
+/// 1. **Verification Stage:** Checks if the email exists in the database.
+/// 2. **Reset Stage:** Allows the user to set a new password if verification passes.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -14,15 +17,19 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Text Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // Focus Nodes (for managing keyboard focus)
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passFocusNode = FocusNode();
   final FocusNode _confirmPassFocusNode = FocusNode();
 
-  // Stage 0: Enter Email, Stage 1: Reset Password
+  // --- UI State ---
+  // 0 = Verify Email, 1 = Reset Password
   int _currentStage = 0;
   String? _verifiedEmail;
 
@@ -37,18 +44,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
+  // --- Logic: Stage 1 (Verify Email) ---
+
   Future<void> _handleVerifyEmail() async {
+    // Dismiss keyboard first for better UX
     FocusScope.of(context).unfocus();
+
     if (_formKey.currentState!.validate()) {
       final dbVM = context.read<DbViewModel>();
+
+      // Check if user exists in DB
       final exists = await dbVM.checkEmailExists(_emailController.text.trim());
 
+      // Async Safety: Ensure widget is still on screen before updating UI
       if (!mounted) return;
 
       if (exists) {
         setState(() {
           _verifiedEmail = _emailController.text.trim();
-          _currentStage = 1;
+          _currentStage = 1; // Move to next stage
         });
         CustomSnackBar.showSuccess(
           context,
@@ -60,9 +74,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
+  // --- Logic: Stage 2 (Reset Password) ---
+
   Future<void> _handleResetPassword() async {
     FocusScope.of(context).unfocus();
+
     if (_formKey.currentState!.validate()) {
+      // Manual validation check for matching passwords
       if (_passwordController.text != _confirmPasswordController.text) {
         CustomSnackBar.showError(context, "Passwords do not match");
         return;
@@ -81,7 +99,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           context,
           "Password reset successful! Please Login.",
         );
-        Navigator.pop(context); // Go back to login
+        Navigator.pop(context); // Close screen and return to Login
       } else {
         CustomSnackBar.showError(context, "Failed to reset password.");
       }
@@ -91,12 +109,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Watch for state changes to update UI (loading spinners, visibility toggles)
     final isLoading = context.watch<DbViewModel>().isLoading;
     final dbVM = context.watch<DbViewModel>();
 
     return Scaffold(
       appBar: AppBar(title: const Text("Reset Password"), centerTitle: true),
       body: GestureDetector(
+        // Dismiss keyboard when tapping outside input fields
         onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
         child: Center(
           child: SingleChildScrollView(
@@ -114,8 +135,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   const SizedBox(height: 30),
 
+                  // Conditional UI Rendering based on Stage
                   if (_currentStage == 0) ...[
-                    // --- STAGE 0: Verify Email ---
+                    // ==========================================
+                    // STAGE 0: Email Verification Form
+                    // ==========================================
                     const Text(
                       "Forgot Password?",
                       textAlign: TextAlign.center,
@@ -178,7 +202,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                     ),
                   ] else ...[
-                    // --- STAGE 1: Set New Password ---
+                    // ==========================================
+                    // STAGE 1: New Password Form
+                    // ==========================================
                     Text(
                       "Reset for $_verifiedEmail",
                       textAlign: TextAlign.center,
@@ -189,6 +215,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     const SizedBox(height: 40),
 
+                    // Password Field
                     TextFormField(
                       controller: _passwordController,
                       focusNode: _passFocusNode,
@@ -226,11 +253,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Confirm Password Field
                     TextFormField(
                       controller: _confirmPasswordController,
                       focusNode: _confirmPassFocusNode,
                       obscureText: !dbVM.isForgotConfirmPasswordVisible,
-
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Confirm new password';
@@ -267,10 +295,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     const SizedBox(height: 24),
 
+                    // Reset Action Button
                     ElevatedButton(
                       onPressed: isLoading ? null : _handleResetPassword,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor:
+                            Colors.green, // Green signifies completion
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -288,6 +318,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                     ),
                     const SizedBox(height: 10),
+
+                    // Back Button (Cancel Stage 1)
                     TextButton(
                       onPressed: () {
                         setState(() {

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Manages the application's theme state (Light vs Dark) and persists user preference.
 class ThemeViewModel extends ChangeNotifier {
-  // Constants
   static const String _prefThemeKey = "is_dark_mode";
 
-  // --- State ---
   ThemeMode _themeMode = ThemeMode.light;
 
-  // --- Getters ---
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
 
@@ -16,28 +14,29 @@ class ThemeViewModel extends ChangeNotifier {
     _loadTheme();
   }
 
-  /// Load saved theme preference on startup
+  /// Loads the saved theme preference from local storage on app startup.
   Future<void> _loadTheme() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Default to Light Mode (false) if no preference is found
+
+      // Default to Light Mode (false) if the user hasn't set a preference yet.
       final isDark = prefs.getBool(_prefThemeKey) ?? false;
 
       _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
       notifyListeners();
     } catch (e) {
-      // If SP fails, default to light mode and don't crash
+      // Fail gracefully: default to light mode if storage is inaccessible.
       debugPrint("ThemeViewModel Error loading theme: $e");
     }
   }
 
-  /// Toggle and save theme preference
+  /// Toggles the theme and saves the preference to local storage.
   Future<void> toggleTheme(bool isDark) async {
-    // OPTIMIZATION: Prevent unnecessary rebuilds if state is identical
+    // Avoid rebuilding the UI if the requested mode is already active.
     if (isDark == isDarkMode) return;
 
-    // Optimistic Update: Update UI immediately before saving to disk
-    // This makes the toggle feel instant.
+    // Optimistic Update: Change the UI state immediately so the switch feels instant,
+    // then save to storage in the background.
     _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
     notifyListeners();
 

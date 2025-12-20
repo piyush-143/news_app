@@ -10,22 +10,27 @@ class DetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Extract theme values once for cleaner code below
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeColor = Theme.of(context).primaryColor;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
     return Scaffold(
+      // Using a Stack to float the "Read Article" button over the scrollable content
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight: 400, // Taller image
-                pinned: true,
-                stretch: true,
+                expandedHeight:
+                    400, // Make the image tall for an immersive feel
+                pinned: true, // Keep the back button visible when scrolled up
+                stretch: true, // Allow the image to "zoom in" when pulling down
                 backgroundColor: isDark
                     ? const Color(0xFF1E1E1E)
                     : Colors.white,
+
+                // Custom Back Button with background for visibility on any image
                 leading: Container(
                   margin: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -37,6 +42,7 @@ class DetailScreen extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
+
                 flexibleSpace: FlexibleSpaceBar(
                   stretchModes: const [
                     StretchMode.zoomBackground,
@@ -45,18 +51,20 @@ class DetailScreen extends StatelessWidget {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
+                      // The News Image
                       Image.network(
                         news.image,
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, o, s) => Container(
-                          decoration: BoxDecoration(
+                        fit: BoxFit.fill,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          decoration: const BoxDecoration(
                             image: DecorationImage(
                               image: AssetImage("assets/no_img.png"),
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
                       ),
-                      // Gradient overlay for better text contrast if we had title here
+                      // Gradient Overlay: Ensures the top status bar area is legible
                       const DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -74,20 +82,26 @@ class DetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // --- Article Content Section ---
               SliverToBoxAdapter(
+                // VISUAL TRICK: We shift the container UP by 20 pixels (`offset: -20`).
+                // This creates the effect of the white content sheet overlapping
+                // the bottom of the image with rounded corners.
                 child: Transform.translate(
-                  offset: const Offset(0, -20), // Pull up effect
+                  offset: const Offset(0, -20),
                   child: Container(
                     decoration: BoxDecoration(
                       color: backgroundColor,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(30),
                       ),
-                      boxShadow: [
+                      // Shadow adds depth between the sheet and the image
+                      boxShadow: const [
                         BoxShadow(
-                          color: Colors.black,
+                          color: Colors.black26, // Subtle shadow
                           blurRadius: 10,
-                          offset: const Offset(0, -5),
+                          offset: Offset(0, -5),
                         ),
                       ],
                     ),
@@ -95,7 +109,7 @@ class DetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- Source & Date Row ---
+                        // --- Source Name & Date ---
                         Row(
                           children: [
                             Container(
@@ -135,7 +149,7 @@ class DetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
 
-                        // --- Title ---
+                        // --- Headline ---
                         Text(
                           news.title,
                           style: TextStyle(
@@ -148,16 +162,16 @@ class DetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
 
-                        // --- Divider ---
                         Divider(color: Colors.grey.shade400),
                         const SizedBox(height: 24),
 
-                        // --- Description (Lead Text) ---
+                        // --- Description (Lead Paragraph) ---
+                        // Styled in italics/bold to differentiate from body text
                         Text(
                           "${news.description}.",
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600, // Slightly bolder
+                            fontWeight: FontWeight.w600,
                             color: isDark
                                 ? Colors.grey.shade300
                                 : Colors.grey.shade800,
@@ -167,9 +181,11 @@ class DetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
 
-                        // --- Main Content ---
+                        // --- Body Content ---
+                        // API Note: Most free news APIs truncate this (e.g., "... [+1200 chars]").
+                        // That is why the "Read Full Article" button below is necessary.
                         Text(
-                          news.content, // Often truncated by API
+                          news.content,
                           style: TextStyle(
                             fontSize: 16,
                             color: isDark
@@ -179,7 +195,9 @@ class DetailScreen extends StatelessWidget {
                           ),
                         ),
 
-                        const SizedBox(height: 100), // Space for FAB
+                        const SizedBox(
+                          height: 100,
+                        ), // Extra space so FAB doesn't cover text
                       ],
                     ),
                   ),
@@ -188,7 +206,7 @@ class DetailScreen extends StatelessWidget {
             ],
           ),
 
-          // --- Floating Action Button for Reading ---
+          // --- Bottom Floating Action Button ---
           Positioned(
             bottom: 30,
             left: 24,

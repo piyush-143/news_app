@@ -7,6 +7,8 @@ import '../../services/utils/app_urls.dart';
 import '../../services/utils/date_formatter.dart';
 import 'detail_screen.dart';
 
+/// Displays a numbered list of trending articles (e.g., #1, #2, #3).
+/// This mimics the "Trending" section found in apps like Twitter or YouTube.
 class TrendingScreen extends StatefulWidget {
   const TrendingScreen({super.key});
 
@@ -18,11 +20,15 @@ class _TrendingScreenState extends State<TrendingScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Watch for state changes to trigger rebuilds
     final newsProvider = context.watch<NewsViewModel>();
     final trendingError = newsProvider.getErrorForCategory("trending");
 
     return Scaffold(
       appBar: AppBar(titleSpacing: 24, title: const Text("Trending News")),
+
+      // --- Content State Machine ---
       body: newsProvider.trendingNews != null
           ? ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 15),
@@ -32,16 +38,20 @@ class _TrendingScreenState extends State<TrendingScreen> {
               ),
               itemBuilder: (context, index) {
                 final news = newsProvider.trendingNews!.articles[index];
+
                 return GestureDetector(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => DetailScreen(news: news)),
                   ),
                   child: Container(
-                    color: Colors.transparent,
+                    color: Colors
+                        .transparent, // Ensures the entire row is clickable
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Row(
                       children: [
+                        // --- Index Number (e.g., #1) ---
+                        // Styled large and bold to emphasize ranking.
                         Text(
                           "#${index + 1}",
                           style: TextStyle(
@@ -54,6 +64,8 @@ class _TrendingScreenState extends State<TrendingScreen> {
                           ),
                         ),
                         const SizedBox(width: 16),
+
+                        // --- Article Info ---
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,6 +101,8 @@ class _TrendingScreenState extends State<TrendingScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
+
+                        // --- Thumbnail ---
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Image.network(
@@ -102,6 +116,7 @@ class _TrendingScreenState extends State<TrendingScreen> {
                               decoration: const BoxDecoration(
                                 image: DecorationImage(
                                   image: AssetImage("assets/no_img.png"),
+                                  fit: BoxFit.cover,
                                 ),
                               ),
                             ),
@@ -113,6 +128,7 @@ class _TrendingScreenState extends State<TrendingScreen> {
                 );
               },
             )
+          // --- Error State ---
           : trendingError != null
           ? Center(
               child: Column(
@@ -141,6 +157,7 @@ class _TrendingScreenState extends State<TrendingScreen> {
                 ],
               ),
             )
+          // --- Loading State ---
           : Center(
               child: CustomLoader(
                 color: isDark ? Colors.white : null,

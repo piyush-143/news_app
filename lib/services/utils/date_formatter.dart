@@ -9,7 +9,7 @@ class DateFormatter {
       // Explicitly convert to IST (UTC + 5:30) regardless of device timezone
       DateTime ist = utc.toUtc().add(const Duration(hours: 5, minutes: 30));
 
-      // Format: 14 Dec 2025, 05:30 PM
+      // Format: Date Month Year
       return DateFormat('dd MMM yyyy').format(ist);
     } catch (e) {
       return dateString;

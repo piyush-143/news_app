@@ -9,25 +9,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/db_service.dart';
 
+/// ViewModel managing User Authentication, Profile Updates, and Session State.
 class DbViewModel with ChangeNotifier {
-  // Accessing the singleton instance
   final DbService _dbService = DbService.getInstance;
 
-  // Constants
+  // Key for persisting session data
   static const String _prefUserEmailKey = 'current_user_email';
 
-  // --- State ---
+  // --- State Variables ---
   bool _isLoggedIn = false;
   String? _currentUserEmail;
   bool _isLoading = false;
 
-  // --- UI State: Password Visibility ---
+  // --- UI State: Password Visibility Toggles ---
   bool _isLoginPasswordVisible = false;
   bool _isSignupPasswordVisible = false;
   bool _isForgotPasswordVisible = false;
   bool _isForgotConfirmPasswordVisible = false;
 
-  // --- Getters ---
+  // --- Public Getters ---
   bool get isLoggedIn => _isLoggedIn;
   String? get currentUserEmail => _currentUserEmail;
   bool get isLoading => _isLoading;
@@ -37,7 +37,7 @@ class DbViewModel with ChangeNotifier {
   bool get isForgotPasswordVisible => _isForgotPasswordVisible;
   bool get isForgotConfirmPasswordVisible => _isForgotConfirmPasswordVisible;
 
-  /// Helper to set loading state
+  /// Updates loading state and notifies UI listeners.
   void setLoading(bool loading) {
     if (_isLoading != loading) {
       _isLoading = loading;
@@ -45,7 +45,7 @@ class DbViewModel with ChangeNotifier {
     }
   }
 
-  // --- Password Visibility Toggles ---
+  // --- UI Logic: Password Toggles ---
 
   void toggleLoginPasswordVisibility() {
     _isLoginPasswordVisible = !_isLoginPasswordVisible;
@@ -69,10 +69,9 @@ class DbViewModel with ChangeNotifier {
 
   // --- Authentication Logic ---
 
-  /// Sign Up Logic
+  /// Registers a new user and automatically logs them in if successful.
   Future<bool> signup(String email, String password, String name) async {
     setLoading(true);
-    // OPTIMIZATION: Removed artificial delays. Let the DB speed dictate UI.
 
     final success = await _dbService.saveDetails(
       email: email,
@@ -88,7 +87,7 @@ class DbViewModel with ChangeNotifier {
     return success;
   }
 
-  /// Login Logic
+  /// Authenticates the user and establishes a session.
   Future<bool> login(String email, String password) async {
     setLoading(true);
 
@@ -100,7 +99,7 @@ class DbViewModel with ChangeNotifier {
     return exists;
   }
 
-  /// Check if Email Exists (For Forgot Password)
+  /// Verifies if an email exists in the database (used for password recovery).
   Future<bool> checkEmailExists(String email) async {
     setLoading(true);
     final user = await _dbService.getUserDetails(email);
@@ -108,7 +107,7 @@ class DbViewModel with ChangeNotifier {
     return user != null;
   }
 
-  /// Reset Password Logic
+  /// Updates the user's password in the database.
   Future<bool> resetPassword(String email, String newPassword) async {
     setLoading(true);
     final success = await _dbService.updatePassword(email, newPassword);
@@ -118,7 +117,8 @@ class DbViewModel with ChangeNotifier {
 
   // --- Profile Management ---
 
-  /// Update Profile Logic
+  /// Updates user profile details.
+  /// Handles session updates if the email is changed.
   Future<bool> updateProfile(String newName, String newEmail) async {
     if (_currentUserEmail == null) return false;
 
@@ -131,11 +131,11 @@ class DbViewModel with ChangeNotifier {
     );
 
     if (success) {
-      // If email changed, we need to update the session which triggers notifyListeners
+      // If email changed, we must update the session key to persist the login.
       if (_currentUserEmail != newEmail) {
         await _setSession(newEmail);
       } else {
-        // If only name changed, we manually notify
+        // If only the name changed, we manually trigger a UI rebuild.
         notifyListeners();
       }
     }
@@ -143,40 +143,41 @@ class DbViewModel with ChangeNotifier {
     return success;
   }
 
-  /// Update Profile Picture Logic
+  /// Pick an image from gallery, compress it, and save it to local storage.
   Future<bool> updateProfilePicture() async {
     if (_currentUserEmail == null) return false;
 
     try {
       final ImagePicker picker = ImagePicker();
-      // OPTIMIZATION: added imageQuality to reduce storage usage and load times
+
+      // Compressing image (quality: 70) to optimize storage and load performance
       final XFile? image = await picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 70,
       );
 
-      if (image == null) return false; // User canceled
+      if (image == null) return false; // User canceled selection
 
       setLoading(true);
 
       final directory = await getApplicationDocumentsDirectory();
 
-      // Use a timestamp to ensure uniqueness and prevent caching issues
+      // Use timestamp in filename to avoid caching issues when the user changes photos
       final String fileName =
           'profile_${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}';
       final String newPath = path.join(directory.path, fileName);
 
-      // Copy image to app directory
+      // Save copy to app's document directory
       await File(image.path).copy(newPath);
 
-      // Update DB with new path
+      // Update database reference
       final success = await _dbService.updateProfileImage(
         _currentUserEmail!,
         newPath,
       );
 
       if (success) {
-        notifyListeners(); // Refresh UI
+        notifyListeners();
       }
 
       setLoading(false);
@@ -190,7 +191,7 @@ class DbViewModel with ChangeNotifier {
 
   // --- Session Management ---
 
-  /// Logout
+  /// Clears local session data and resets state.
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefUserEmailKey);
@@ -200,7 +201,7 @@ class DbViewModel with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Check Session on App Start
+  /// Checks for an existing session on app startup.
   Future<void> checkSession() async {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString(_prefUserEmailKey);
@@ -212,7 +213,7 @@ class DbViewModel with ChangeNotifier {
     }
   }
 
-  // Private helper to save session
+  /// Helper to save user email to SharedPreferences and update state.
   Future<void> _setSession(String email) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefUserEmailKey, email);

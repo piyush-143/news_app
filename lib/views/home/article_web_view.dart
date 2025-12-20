@@ -4,6 +4,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../widgets/custom_loader.dart';
 
+/// A dedicated screen to view news articles within the app.
+/// Uses a WebView to render the original source content.
 class ArticleWebView extends StatefulWidget {
   final String url;
   final String title;
@@ -22,9 +24,11 @@ class _ArticleWebViewState extends State<ArticleWebView> {
   @override
   void initState() {
     super.initState();
-    // Optimization: Initialize after the frame to ensure smooth navigation transition
+    // PERFORMANCE OPTIMIZATION:
+    // WebViews are heavy widgets. Initializing them immediately can cause the
+    // navigation transition (push animation) to stutter or freeze.
+    // We wait for the frame to finish, plus a tiny delay, to let the animation complete first.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Small delay to let the page transition animation finish (prevents jank)
       Future.delayed(const Duration(milliseconds: 200), _initializeWebView);
     });
   }
@@ -32,6 +36,8 @@ class _ArticleWebViewState extends State<ArticleWebView> {
   void _initializeWebView() {
     try {
       final isDark = Theme.of(context).brightness == Brightness.dark;
+
+      // Match WebView background to the app theme to avoid a white flash in dark mode
       final backgroundColor = isDark ? Colors.black : Colors.white;
 
       final controller = WebViewController()
@@ -50,14 +56,15 @@ class _ArticleWebViewState extends State<ArticleWebView> {
               if (mounted) {
                 setState(() {
                   _hasError = false;
-                  _loadingProgress = 0.1; // Start progress
+                  _loadingProgress =
+                      0.1; // Jump-start the bar so user sees activity
                 });
               }
             },
             onPageFinished: (String url) {
               if (mounted) {
                 setState(() {
-                  _loadingProgress = 1.0; // Complete
+                  _loadingProgress = 1.0; // Hide the bar
                 });
               }
             },
@@ -65,7 +72,10 @@ class _ArticleWebViewState extends State<ArticleWebView> {
               if (kDebugMode) {
                 print("WebView Error: ${error.description}");
               }
-              // Only block UI for critical main-frame errors
+              // ERROR HANDLING STRATEGY:
+              // Only block the UI for critical failures (No Internet, DNS fail).
+              // We ignore minor errors (like a missing ad image or tracking script)
+              // so the user can still read the text.
               if (error.errorType == WebResourceErrorType.connect ||
                   error.errorType == WebResourceErrorType.hostLookup ||
                   error.errorType == WebResourceErrorType.timeout) {
@@ -90,6 +100,7 @@ class _ArticleWebViewState extends State<ArticleWebView> {
 
     return Scaffold(
       appBar: AppBar(
+        // Custom Title Layout: Shows Title + URL Domain
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -109,7 +120,7 @@ class _ArticleWebViewState extends State<ArticleWebView> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Refresh Button
+          // Refresh Button (Useful if page stalls)
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
@@ -118,13 +129,14 @@ class _ArticleWebViewState extends State<ArticleWebView> {
           ),
         ],
       ),
+      // Using Stack to layer the loading indicator ON TOP of the WebView
       body: Stack(
         children: [
-          // 1. WebView (Content)
+          // 1. Content Layer
           if (_controller != null && !_hasError)
             WebViewWidget(controller: _controller!),
 
-          // 2. Error State
+          // 2. Error Layer
           if (_hasError)
             Center(
               child: Column(
@@ -141,11 +153,11 @@ class _ArticleWebViewState extends State<ArticleWebView> {
               ),
             ),
 
-          // 3. Initial Loading Spinner (Before Controller is ready)
+          // 3. Initialization Spinner (Waiting for Controller)
           if (_controller == null && !_hasError)
             const Center(child: CustomLoader(size: 40)),
 
-          // 4. Linear Progress Bar (During Page Load)
+          // 4. Progress Bar Layer (Topmost)
           if (_loadingProgress < 1.0 && _controller != null)
             Positioned(
               top: 0,

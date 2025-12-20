@@ -6,6 +6,8 @@ import '../../widgets/custom_loader.dart';
 import '../../widgets/custom_snack_bar.dart';
 import '../home/main_controller.dart';
 
+/// Handles new user registration.
+/// Captures Name, Email, and Password to create a local account.
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -15,16 +17,20 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Text Controllers
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // FocusNodes for managing keyboard focus interactions
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
 
   @override
   void dispose() {
+    // Prevent memory leaks by disposing controllers and nodes
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -34,7 +40,9 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
+  /// Validates form and attempts to create a new user in the local DB.
   Future<void> _handleSignUp() async {
+    // UX: Dismiss keyboard immediately to show the loading state clearly
     FocusScope.of(context).requestFocus(FocusNode());
 
     if (_formKey.currentState!.validate()) {
@@ -46,16 +54,18 @@ class _SignupScreenState extends State<SignupScreen> {
         _nameController.text.trim(),
       );
 
+      // Async Safety Check
       if (!mounted) return;
 
       if (success) {
+        // Navigation: Use pushAndRemoveUntil to clear the navigation stack.
+        // This prevents the user from hitting "Back" and returning to the Signup/Login screens.
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const MainWrapper()),
           (route) => false,
         );
       } else {
-        // Use CustomSnackBar
         CustomSnackBar.showError(
           context,
           "Registration failed. Email might already exist.",
@@ -68,15 +78,18 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Listen to ViewModel for loading state and password visibility toggles
     final dbViewModel = context.watch<DbViewModel>();
     final isLoading = dbViewModel.isLoading;
     final isPasswordVisible = dbViewModel.isSignupPasswordVisible;
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading:
+            false, // Custom back flow handled via buttons
         actionsPadding: const EdgeInsets.only(right: 15, top: 10),
         actions: [
+          // --- Skip Button (Guest Mode) ---
           TextButton(
             onPressed: () {
               Navigator.pushReplacement(
@@ -100,11 +113,13 @@ class _SignupScreenState extends State<SignupScreen> {
           const SizedBox(width: 15),
         ],
       ),
+      // GestureDetector closes keyboard when tapping background
       body: GestureDetector(
         onTap: () {
           FocusScope.of(context).requestFocus(FocusNode());
         },
         child: Center(
+          // SingleChildScrollView prevents "Bottom Overflow" when keyboard appears
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.only(left: 24.0, right: 24, bottom: 24),
@@ -114,6 +129,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // --- Header ---
                     Image.asset("assets/logo.png", width: 140, height: 140),
                     const SizedBox(height: 20),
                     const Text(
@@ -129,6 +145,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
                     const SizedBox(height: 40),
+
+                    // --- Name Field ---
                     TextFormField(
                       controller: _nameController,
                       focusNode: _nameFocusNode,
@@ -152,6 +170,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // --- Email Field ---
                     TextFormField(
                       controller: _emailController,
                       focusNode: _emailFocusNode,
@@ -178,10 +198,12 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // --- Password Field ---
                     TextFormField(
                       controller: _passwordController,
                       focusNode: _passwordFocusNode,
-                      obscureText: !isPasswordVisible,
+                      obscureText: !isPasswordVisible, // Toggles masking
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter a password';
@@ -200,6 +222,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 : Icons.visibility_off,
                           ),
                           onPressed: () {
+                            // Toggle visibility in ViewModel state
                             context
                                 .read<DbViewModel>()
                                 .toggleSignupPasswordVisibility();
@@ -217,6 +240,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
+
+                    // --- Sign Up Button ---
                     ElevatedButton(
                       onPressed: isLoading ? null : _handleSignUp,
                       style: ElevatedButton.styleFrom(
@@ -237,6 +262,8 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                             ),
                     ),
+
+                    // --- Footer / Login Link ---
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -244,6 +271,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         const Text("Already have an account?"),
                         TextButton(
                           onPressed: () {
+                            // Close keyboard before navigating back
                             FocusScope.of(context).requestFocus(FocusNode());
                             Navigator.pop(context);
                           },
