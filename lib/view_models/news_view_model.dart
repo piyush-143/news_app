@@ -57,7 +57,7 @@ class NewsViewModel with ChangeNotifier {
     "Tech",
     "Health",
     "Science",
-    // "Gaming",
+    "Gaming",
     "Business",
     "Entertainment",
     "Sports",
