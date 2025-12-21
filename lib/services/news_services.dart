@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
-import 'package:news_app/models/news_model.dart';
+import 'package:news_app/models/news_response_model.dart';
 
 class NewsServices {
   // Private constructor to enforce Singleton pattern (only one instance exists)

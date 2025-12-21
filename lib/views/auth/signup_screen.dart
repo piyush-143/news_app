@@ -62,7 +62,7 @@ class _SignupScreenState extends State<SignupScreen> {
         // This prevents the user from hitting "Back" and returning to the Signup/Login screens.
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const MainWrapper()),
+          MaterialPageRoute(builder: (context) => const MainController()),
           (route) => false,
         );
       } else {
@@ -94,7 +94,7 @@ class _SignupScreenState extends State<SignupScreen> {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const MainWrapper()),
+                MaterialPageRoute(builder: (context) => const MainController()),
               );
             },
             style: OutlinedButton.styleFrom(

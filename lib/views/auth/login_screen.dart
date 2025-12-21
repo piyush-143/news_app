@@ -59,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Use pushReplacement to prevent user from going "back" to the login screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainWrapper()),
+          MaterialPageRoute(builder: (context) => const MainController()),
         );
       } else {
         CustomSnackBar.showError(context, "Invalid email or password");
@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const MainWrapper()),
+                MaterialPageRoute(builder: (context) => const MainController()),
               );
             },
             style: OutlinedButton.styleFrom(backgroundColor: Colors.indigo),

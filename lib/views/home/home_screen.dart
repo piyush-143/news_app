@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
-import '../../models/news_model.dart';
+import '../../models/news_response_model.dart';
 import '../../services/utils/app_urls.dart';
 import '../../view_models/index_view_model.dart';
 import '../../view_models/news_view_model.dart';

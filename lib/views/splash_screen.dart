@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (dbViewModel.isLoggedIn) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const MainWrapper()),
+        MaterialPageRoute(builder: (context) => const MainController()),
       );
     } else {
       Navigator.pushReplacement(

@@ -13,14 +13,14 @@ import 'settings_screen.dart';
 
 /// The "Shell" of the application.
 /// Manages Bottom Navigation, Android Back Button logic, and Initial Data Fetching.
-class MainWrapper extends StatefulWidget {
-  const MainWrapper({super.key});
+class MainController extends StatefulWidget {
+  const MainController({super.key});
 
   @override
-  State<MainWrapper> createState() => _MainWrapperState();
+  State<MainController> createState() => _MainControllerState();
 }
 
-class _MainWrapperState extends State<MainWrapper> {
+class _MainControllerState extends State<MainController> {
   @override
   void initState() {
     super.initState();

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/news_model.dart';
+import '../models/news_response_model.dart';
 import '../services/utils/date_formatter.dart';
 
 class NewsListItem extends StatelessWidget {

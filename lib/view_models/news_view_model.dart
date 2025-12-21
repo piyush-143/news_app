@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:news_app/services/news_services.dart';
 
-import '../models/news_model.dart';
+import '../models/news_response_model.dart';
 
 /// ViewModel responsible for fetching, caching, and managing state for
 /// various news categories independently.

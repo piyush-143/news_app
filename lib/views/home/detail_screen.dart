@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:news_app/services/url_launch_service.dart';
 
-import '../../models/news_model.dart';
+import '../../models/news_response_model.dart';
 import '../../services/utils/date_formatter.dart';
 
 class DetailScreen extends StatelessWidget {
