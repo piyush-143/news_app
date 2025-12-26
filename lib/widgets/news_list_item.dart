@@ -11,7 +11,7 @@ class NewsListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15, top: 10),
+      margin: const EdgeInsets.only(bottom: 12, top: 10),
       child: Row(
         children: [
           ClipRRect(

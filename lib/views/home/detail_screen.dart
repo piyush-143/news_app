@@ -221,7 +221,7 @@ class DetailScreen extends StatelessWidget {
                   news.source.name,
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: themeColor,
+                  backgroundColor: Colors.indigo,
                   foregroundColor: Colors.white,
                   elevation: 8,
                   shadowColor: themeColor.withAlpha(80),
