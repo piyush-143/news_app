@@ -1,17 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-import '../../services/db_service.dart';
-import '../../view_models/db_view_model.dart';
+import '../../view_models/firebase_auth_view_model.dart';
 import '../../widgets/custom_snack_bar.dart';
 
 /// Screen to view and edit the current user's profile details.
-/// Features:
-/// 1. Profile Picture upload/change.
-/// 2. Name and Email editing.
-/// 3. Real-time updates from the local SQLite database.
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
 
@@ -20,10 +16,7 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  // Temporary storage to pre-fill the edit dialog
-  String? _currentName;
-
-  /// Displays a popup dialog allowing the user to modify their Name and Email.
+  // ... (Dialog Logic remains same)
   void _showEditDialog(
     BuildContext context,
     String currentName,
@@ -34,7 +27,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final emailController = TextEditingController(text: currentEmail);
     final formKey = GlobalKey<FormState>();
 
-    // Theme-dependent colors for the dialog
     final dialogBgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black;
     final inputFillColor = isDark ? Colors.white12 : Colors.grey.shade200;
@@ -73,7 +65,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     icon: Icons.email_outlined,
                     fillColor: inputFillColor,
                     textColor: textColor,
-                    maxLines: 2,
+                    maxLines: 1,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Note: Changing email will require verification.",
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
                 ],
               ),
@@ -81,7 +78,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
           actionsPadding: const EdgeInsets.only(bottom: 20, right: 20),
           actions: [
-            // Cancel Button
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
@@ -92,21 +88,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
               ),
             ),
-            // Save Button
             ElevatedButton(
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
-                  final dbVM = context.read<DbViewModel>();
+                  final authVM = context.read<FirebaseAuthViewModel>();
 
-                  // Attempt to update in DB
-                  final success = await dbVM.updateProfile(
-                    nameController.text.trim(),
-                    emailController.text.trim(),
+                  final success = await authVM.updateUserProfile(
+                    name: nameController.text.trim(),
+                    email: emailController.text.trim(),
                   );
 
-                  // Async Safety: Check if widget is mounted before using context
                   if (context.mounted) {
-                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context);
 
                     if (success) {
                       CustomSnackBar.showSuccess(
@@ -114,11 +107,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         "Profile updated successfully",
                       );
                     } else {
-                      // This usually happens if the new email is already taken by another user
-                      CustomSnackBar.showError(
-                        context,
-                        "Update failed. Email might be taken.",
-                      );
+                      final error =
+                          authVM.errorMessage ??
+                          "Update failed. Please try again.";
+                      CustomSnackBar.showError(context, error);
                     }
                   }
                 }
@@ -142,7 +134,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  /// Helper widget for consistent text fields inside the dialog
   TextFormField _buildDialogTextField({
     required TextEditingController controller,
     required String label,
@@ -166,26 +157,36 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.indigo, width: 1.5),
-        ),
       ),
     );
   }
 
-  /// Triggers the image picker in the ViewModel
+  // ✅ NEW: Picks image from gallery and uploads to Firebase
   Future<void> _pickImage(BuildContext context) async {
-    final dbVM = context.read<DbViewModel>();
-    final success = await dbVM.updateProfilePicture();
+    final picker = ImagePicker();
+    // 1. Pick Image
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70, // Optimize size
+    );
+
+    if (pickedFile == null) return; // User cancelled
 
     if (context.mounted) {
-      if (success) {
-        CustomSnackBar.showSuccess(context, "Profile picture updated");
+      final authVM = context.read<FirebaseAuthViewModel>();
+
+      // 2. Upload Image
+      final success = await authVM.updateProfilePicture(pickedFile.path);
+
+      if (context.mounted) {
+        if (success) {
+          CustomSnackBar.showSuccess(context, "Profile picture updated!");
+        } else {
+          CustomSnackBar.showError(
+            context,
+            authVM.errorMessage ?? "Failed to upload image",
+          );
+        }
       }
     }
   }
@@ -194,13 +195,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Watch for changes (e.g., if email is updated, this triggers a rebuild)
-    final dbVM = context.watch<DbViewModel>();
-    final email = dbVM.currentUserEmail ?? "Guest";
+    final fbVM = context.watch<FirebaseAuthViewModel>();
+    final user = fbVM.currentUser;
+    final isLoading = fbVM.isLoading; // Watch loading state for spinner
 
-    // Theme Colors
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text("User not logged in")));
+    }
+
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade200;
     final textColor = isDark ? Colors.white : Colors.black;
+
+    // Helper to safely determine if we have a valid image path
+    final hasImage =
+        fbVM.profileImagePath != null && fbVM.profileImagePath!.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -208,10 +216,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         titleSpacing: 0,
         actionsPadding: const EdgeInsets.only(right: 15),
         actions: [
-          // Edit Button in AppBar
           IconButton(
             onPressed: () {
-              _showEditDialog(context, _currentName ?? "", email, isDark);
+              _showEditDialog(
+                context,
+                user.displayName ?? "",
+                user.email ?? "",
+                isDark,
+              );
             },
             style: IconButton.styleFrom(
               backgroundColor: isDark
@@ -228,122 +240,106 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        // FutureBuilder ensures we fetch the absolute latest data from SQLite
-        // every time the UI rebuilds.
-        child: FutureBuilder<Map<String, dynamic>?>(
-          future: DbService.getInstance.getUserDetails(email),
-          builder: (context, snapshot) {
-            final data = snapshot.data;
-            _currentName = data?['Name'];
-            final String? imagePath = data?['Image'];
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
 
-            // Handle loading vs data state for the Name display
-            final displayTitle = snapshot.hasData
-                ? (_currentName ?? "No Name")
-                : (snapshot.connectionState == ConnectionState.waiting
-                      ? "Loading..."
-                      : "No Name");
-
-            return Column(
-              children: [
-                const SizedBox(height: 20),
-
-                // --- Profile Image Section ---
-                Center(
-                  // Stack allows us to place the "Camera Icon" on top of the Avatar
-                  child: Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      // The Main Avatar
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade200,
-                            width: 4,
-                          ),
-                        ),
-                        child: CircleAvatar(
-                          radius: 60,
-                          backgroundColor: isDark
-                              ? Colors.grey.shade800
-                              : Colors.indigo.shade50,
-                          backgroundImage:
-                              (imagePath != null && imagePath.isNotEmpty)
-                              ? FileImage(File(imagePath))
-                              : null,
-                          child: (imagePath == null || imagePath.isEmpty)
-                              ? Icon(
-                                  Icons.person,
-                                  size: 60,
-                                  color: isDark ? Colors.white : Colors.indigo,
-                                )
-                              : null,
-                        ),
+            // --- Profile Image ---
+            Center(
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
+                        width: 4,
                       ),
-
-                      // The Edit/Camera Badge
-                      GestureDetector(
-                        onTap: () => _pickImage(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.indigo,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).scaffoldBackgroundColor,
-                              width: 3,
-                            ),
-                          ),
-                          child: dbVM.isLoading
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.camera_alt_rounded,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                        ),
-                      ),
-                    ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundColor: isDark
+                          ? Colors.grey.shade800
+                          : Colors.indigo.shade50,
+                      // ✅ FIXED: Null-safe check
+                      backgroundImage: hasImage
+                          ? ResizeImage(
+                              FileImage(File(fbVM.profileImagePath!)),
+                              width: 500,
+                            )
+                          : null,
+                      // ✅ FIXED: Only show icon if no image
+                      child: !hasImage
+                          ? Icon(
+                              Icons.person,
+                              size: 60,
+                              color: isDark ? Colors.white : Colors.indigo,
+                            )
+                          : null,
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 40),
+                  // Camera Icon Button
+                  GestureDetector(
+                    onTap: isLoading ? null : () => _pickImage(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          width: 3,
+                        ),
+                      ),
+                      // Show Spinner if uploading, else show Camera Icon
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-                // --- Info Tiles ---
-                _buildInfoTile(
-                  "Full Name",
-                  displayTitle,
-                  Icons.person_outline_rounded,
-                  cardColor,
-                  textColor,
-                ),
-                const SizedBox(height: 16),
-                _buildInfoTile(
-                  "Email Address",
-                  email,
-                  Icons.email_outlined,
-                  cardColor,
-                  textColor,
-                ),
-              ],
-            );
-          },
+            const SizedBox(height: 40),
+
+            // --- Info Tiles ---
+            _buildInfoTile(
+              "Full Name",
+              user.displayName ?? "Not Set", // Safely handle null displayName
+              Icons.person_outline_rounded,
+              cardColor,
+              textColor,
+            ),
+            const SizedBox(height: 16),
+            _buildInfoTile(
+              "Email Address",
+              user.email ?? "Not Set",
+              Icons.email_outlined,
+              cardColor,
+              textColor,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// Reusable widget for displaying user details (Name, Email)
   Widget _buildInfoTile(
     String label,
     String value,

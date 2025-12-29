@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 
-import '../view_models/db_view_model.dart';
+import '../view_models/firebase_auth_view_model.dart';
 import 'auth/login_screen.dart';
 import 'home/main_controller.dart';
 
@@ -25,23 +25,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
   /// Handles the startup logic: checks for a logged-in user while showing the splash animation.
   Future<void> _checkAuthAndNavigate() async {
-    // 1. Trigger the session check (Data Logic)
-    final dbViewModel = context.read<DbViewModel>();
-    final sessionCheck = dbViewModel.checkSession();
+    // 1. Show Splash for at least 3 seconds
+    await Future.delayed(const Duration(seconds: 3));
 
-    // 2. Enforce a minimum display time (UI Logic)
-    // We wait at least 3 seconds so the user can actually see the branding,
-    // avoiding a jarring flicker if the database check is too fast.
-    final minSplashTime = Future.delayed(const Duration(seconds: 3));
-
-    // Wait for BOTH the data check and the timer to finish
-    await Future.wait([minSplashTime, sessionCheck]);
-
-    // Safety check: Ensure the widget is still on screen before navigating
+    // 2. Check if widget is still valid
     if (!mounted) return;
 
-    // 3. Navigation Decision
-    if (dbViewModel.isLoggedIn) {
+    // 3. Check Auth State
+    // We check *after* the delay to ensure we have the latest state if init took a moment.
+    final authViewModel = context.read<FirebaseAuthViewModel>();
+    final isLoggedIn = authViewModel.isLoggedIn;
+
+    // 4. Navigate
+    if (isLoggedIn) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainController()),

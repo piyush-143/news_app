@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:news_app/views/auth/signUp_screen.dart';
 import 'package:provider/provider.dart';
 
-import '../../view_models/db_view_model.dart';
+import '../../view_models/firebase_auth_view_model.dart';
+import '../../view_models/toggle_view_model.dart';
 import '../../widgets/custom_loader.dart';
 import '../../widgets/custom_snack_bar.dart';
 import '../home/main_controller.dart';
 import 'forgot_password_screen.dart';
+import 'signUp_screen.dart';
 
-/// The primary entry point for users.
-/// Handles Form Validation, Authentication State, and Navigation to the main app.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,17 +19,16 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers to retrieve user input
+  // Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // FocusNodes help us manage keyboard behavior (e.g., moving next, or closing it)
+  // FocusNodes
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
 
   @override
   void dispose() {
-    // Always dispose controllers to prevent memory leaks
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocusNode.dispose();
@@ -38,32 +36,33 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Handles the login submission logic.
-  Future<void> _handleLogin() async {
-    // UX: Dismiss the keyboard immediately so the user sees the loading state clearly
+  Future<void> _login() async {
+    // Dismiss keyboard
     FocusScope.of(context).unfocus();
 
     if (_formKey.currentState!.validate()) {
-      // Access the ViewModel without listening to changes (read-only) for the function call
-      final dbVM = context.read<DbViewModel>();
+      final authVM = context.read<FirebaseAuthViewModel>();
 
-      final success = await dbVM.login(
+      final success = await authVM.loginWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
-      // Async Safety: Ensure the widget is still on screen before navigating
+      // Async gap check
       if (!mounted) return;
 
       if (success) {
-        // Use pushReplacement to prevent user from going "back" to the login screen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainController()),
         );
       } else {
-        CustomSnackBar.showError(context, "Invalid email or password");
+        // Use the correct property: errorMessage
+        final error = authVM.errorMessage ?? "Login failed. Please try again.";
+        CustomSnackBar.showError(context, error);
       }
+    } else {
+      CustomSnackBar.showError(context, "Invalid email or password");
     }
   }
 
@@ -71,14 +70,18 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Listen to ViewModel changes to update UI (Loading Spinner, Password Visibility)
-    final dbViewModel = context.watch<DbViewModel>();
-    final isLoading = dbViewModel.isLoading;
-    final isPasswordVisible = dbViewModel.isLoginPasswordVisible;
+    // Listen to Firebase ViewModel for loading state
+    final authVM = context.watch<FirebaseAuthViewModel>();
+    final isLoading = authVM.isLoading;
+
+    // Listen to ToggleViewModel for password visibility
+    final isPasswordVisible = context
+        .watch<ToggleViewModel>()
+        .isLoginPasswordVisible;
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Hide back button
+        automaticallyImplyLeading: false,
         actionsPadding: const EdgeInsets.only(right: 15, top: 10),
         actions: [
           // --- Guest Mode / Skip Button ---
@@ -102,13 +105,9 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(width: 15),
         ],
       ),
-      // GestureDetector ensures the keyboard closes if the user taps the background
       body: GestureDetector(
-        onTap: () {
-          FocusScope.of(context).requestFocus(FocusNode());
-        },
+        onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
         child: Center(
-          // SingleChildScrollView prevents "Bottom Overflow" errors when keyboard rises
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -119,7 +118,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // --- Header Section ---
-                    Image.asset("assets/logo.png", width: 140, height: 140),
+                    Image.asset(
+                      "assets/logo.png",
+                      width: 140,
+                      height: 140,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.newspaper,
+                        size: 100,
+                        color: Colors.indigo,
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     const Text(
                       "Welcome Back",
@@ -137,11 +145,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // --- Input Fields ---
+                    // --- Email Field ---
                     TextFormField(
                       controller: _emailController,
                       focusNode: _emailFocusNode,
-                      autofocus: false,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
@@ -165,11 +174,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // --- Password Field ---
                     TextFormField(
                       controller: _passwordController,
                       focusNode: _passwordFocusNode,
-                      obscureText: !isPasswordVisible, // Toggles text masking
-                      autofocus: false,
+                      obscureText: !isPasswordVisible,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _login(),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your password';
@@ -188,9 +200,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : Icons.visibility_off,
                           ),
                           onPressed: () {
-                            // Toggle state in ViewModel to keep UI logic clean
                             context
-                                .read<DbViewModel>()
+                                .read<ToggleViewModel>()
                                 .toggleLoginPasswordVisibility();
                           },
                         ),
@@ -211,7 +222,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          FocusScope.of(context).requestFocus(FocusNode());
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -230,10 +240,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    // --- Login Action ---
+                    // --- Login Button ---
                     const SizedBox(height: 10),
                     ElevatedButton(
-                      onPressed: isLoading ? null : _handleLogin,
+                      onPressed: isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo,
                         foregroundColor: Colors.white,
@@ -243,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       child: isLoading
-                          ? const CustomLoader(color: Colors.white, size: 40)
+                          ? const CustomLoader(color: Colors.white, size: 24)
                           : const Text(
                               "Login",
                               style: TextStyle(
@@ -253,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                     ),
 
-                    // --- Footer / Sign Up Link ---
+                    // --- Sign Up Link ---
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -261,8 +271,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Text("Don't have an account?"),
                         TextButton(
                           onPressed: () {
-                            FocusScope.of(context).requestFocus(FocusNode());
-
                             Navigator.push(
                               context,
                               MaterialPageRoute(

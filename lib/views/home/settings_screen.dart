@@ -3,8 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../services/db_service.dart';
-import '../../view_models/db_view_model.dart';
+import '../../view_models/firebase_auth_view_model.dart';
 import '../../view_models/theme_view_model.dart';
 import '../../widgets/custom_snack_bar.dart';
 import '../auth/login_screen.dart';
@@ -27,8 +26,22 @@ class SettingsScreen extends StatelessWidget {
     final tileBgColor = isDark ? Colors.grey.shade900 : Colors.white;
 
     // Consumer2 allows us to listen to BOTH Theme changes and Auth changes
-    return Consumer2<ThemeViewModel, DbViewModel>(
-      builder: (context, themeVM, dbVM, child) {
+    return Consumer2<ThemeViewModel, FirebaseAuthViewModel>(
+      builder: (context, themeVM, fbVM, child) {
+        // --- Determine Image Source ---
+        ImageProvider? avatarImage;
+        if (fbVM.profileImagePath != null &&
+            fbVM.profileImagePath!.isNotEmpty) {
+          // 1. Prioritize local file path
+          avatarImage = ResizeImage(
+            FileImage(File(fbVM.profileImagePath!)),
+            width: 100, // Optimize memory for small avatar
+          );
+        } else if (fbVM.currentUser?.photoURL != null) {
+          // 2. Fallback to Firebase Storage URL
+          avatarImage = NetworkImage(fbVM.currentUser!.photoURL!);
+        }
+
         return Scaffold(
           appBar: AppBar(
             titleSpacing: 24,
@@ -39,64 +52,28 @@ class SettingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 24.0),
                 child: GestureDetector(
                   onTap: () {
-                    if (dbVM.isLoggedIn) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const UserProfileScreen(),
-                        ),
-                      );
-                    } else {
-                      CustomSnackBar.showInfo(
-                        context,
-                        "Please login to view profile",
-                      );
-                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserProfileScreen(),
+                      ),
+                    );
                   },
-                  child: dbVM.isLoggedIn && dbVM.currentUserEmail != null
-                      // DATA FETCHING: We use a FutureBuilder here to fetch the latest
-                      // image path from SQLite. This ensures that if the user just updated
-                      // their photo, it reflects here immediately without a full app restart.
-                      ? FutureBuilder<Map<String, dynamic>?>(
-                          future: DbService.getInstance.getUserDetails(
-                            dbVM.currentUserEmail!,
-                          ),
-                          builder: (context, snapshot) {
-                            final imagePath = snapshot.data?['Image'];
-                            final hasImage =
-                                imagePath != null && imagePath.isNotEmpty;
-
-                            return CircleAvatar(
-                              radius: 22,
-                              backgroundColor: isDark
-                                  ? Colors.grey.shade800
-                                  : Colors.indigo.shade50,
-                              backgroundImage: hasImage
-                                  ? FileImage(File(imagePath))
-                                  : null,
-                              child: hasImage
-                                  ? null
-                                  : Icon(
-                                      Icons.person,
-                                      size: 25,
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.indigo,
-                                    ),
-                            );
-                          },
-                        )
-                      : CircleAvatar(
-                          radius: 22,
-                          backgroundColor: isDark
-                              ? Colors.grey.shade800
-                              : Colors.indigo.shade50,
-                          child: Icon(
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor: isDark
+                        ? Colors.grey.shade800
+                        : Colors.indigo.shade50,
+                    backgroundImage: avatarImage,
+                    // Only show Icon if there is no image
+                    child: (avatarImage == null)
+                        ? Icon(
                             Icons.person,
                             size: 25,
                             color: isDark ? Colors.white : Colors.indigo,
-                          ),
-                        ),
+                          )
+                        : null,
+                  ),
                 ),
               ),
             ],
@@ -253,31 +230,10 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               // --- 4. Auth Action Button ---
-              // Shows "Sign Out" if logged in, otherwise "Login"
-              if (dbVM.isLoggedIn)
-                _buildActionButton(
-                  label: "Sign Out",
-                  textColor: Colors.red.shade700,
-                  bgColor: Colors.red.shade100,
-                  onPressed: () async {
-                    await dbVM.logout();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                        (route) => false,
-                      );
-                    }
-                  },
-                )
-              else
-                _buildActionButton(
-                  label: "Login",
-                  textColor: Colors.indigo.shade700,
-                  bgColor: Colors.indigo.shade100,
-                  onPressed: () {
+              TextButton(
+                onPressed: () async {
+                  await fbVM.logout();
+                  if (context.mounted) {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
@@ -285,8 +241,25 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       (route) => false,
                     );
-                  },
+                  }
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.red.shade700.withAlpha(200)),
+                  ),
+                  backgroundColor: Colors.red.shade100,
                 ),
+                child: Text(
+                  "Sign Out",
+                  style: TextStyle(
+                    color: Colors.red.shade700,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 10),
 
@@ -306,33 +279,6 @@ class SettingsScreen extends StatelessWidget {
   }
 
   // --- Helper Widgets ---
-  //Login/Sign Out Button
-  Widget _buildActionButton({
-    required String label,
-    required Color textColor,
-    required Color bgColor,
-    required VoidCallback onPressed,
-  }) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: textColor.withAlpha(200)),
-        ),
-        backgroundColor: bgColor,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
 
   Widget _buildSectionHeader(Color textColor, String title) {
     return Padding(
