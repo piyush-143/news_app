@@ -1,6 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
+
+import 'firestore_service.dart';
 
 class FirebaseAuthService {
   // Singleton Pattern
@@ -8,12 +9,42 @@ class FirebaseAuthService {
   static final FirebaseAuthService instance = FirebaseAuthService._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  // final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   User? get currentUser => _auth.currentUser;
+
+  Future<String?> signUpWithEmailAndPassword(
+    String email,
+    String password,
+    String name,
+  ) async {
+    try {
+      UserCredential credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user != null) {
+        // Optimization: Run Auth update and Firestore save in parallel
+        // This reduces the total time the user waits
+        await Future.wait([
+          credential.user!.updateDisplayName(name),
+          _firestoreService.saveUser(
+            uid: credential.user!.uid,
+            email: email,
+            name: name,
+          ),
+        ]);
+      }
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return e.message;
+    } catch (e) {
+      return "An unknown error occurred";
+    }
+  }
 
   Future<String?> loginWithEmailAndPassword(
     String email,
@@ -29,37 +60,6 @@ class FirebaseAuthService {
     }
   }
 
-  // ✅ UPDATED: Accepts Name and updates profile immediately + Creates Firestore Doc
-  Future<String?> signUpWithEmailAndPassword(
-    String email,
-    String password,
-    String name,
-  ) async {
-    try {
-      UserCredential credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (credential.user != null) {
-        await credential.user!.updateDisplayName(name);
-
-        // Create the user document in Firestore to prevent errors later
-        await _firestore.collection('user').doc(credential.user!.uid).set({
-          'email': email,
-          'name': name,
-          'image': '', // Initialize empty image path
-        });
-      }
-      return null;
-    } on FirebaseAuthException catch (e) {
-      return e.message;
-    } catch (e) {
-      return "An unknown error occurred";
-    }
-  }
-
-  // ✅ UPDATED: Updates Name in Firebase Auth AND Firestore
   Future<String?> updateUserProfile({
     required String name,
     required String email,
@@ -68,57 +68,54 @@ class FirebaseAuthService {
       final user = _auth.currentUser;
       if (user == null) return "User not logged in";
 
-      if (name != user.displayName) {
-        await user.updateDisplayName(name);
-        // Also update Firestore
-        await _firestore.collection('user').doc(user.uid).update({
-          'name': name,
-        });
+      // Optimization: Check if changes are actually needed before making API calls
+      final bool nameChanged = name != user.displayName;
+      final bool emailChanged = email != user.email;
+
+      if (!nameChanged && !emailChanged) return null;
+
+      // 1. Update Name (Parallelize Auth and Firestore updates)
+      if (nameChanged) {
+        await Future.wait([
+          user.updateDisplayName(name),
+          _firestoreService.updateName(user.uid, name),
+        ]);
       }
 
-      if (email != user.email) {
+      // 2. Handle Email Update
+      if (emailChanged) {
         await user.verifyBeforeUpdateEmail(email);
+        await user.reload();
+        return "Verification email sent to $email. Please check your inbox.";
       }
 
       await user.reload();
       return null;
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        return "Security Check: Please logout and login again to change your email.";
+      }
       return e.message;
     } catch (e) {
       return e.toString();
     }
   }
 
-  // ✅ NEW: Saves image PATH to Firestore
-  Future<String?> uploadProfileImage(String imagePath) async {
+  Future<void> reloadUser() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return "User not logged in";
+      if (user == null) return;
 
-      // Store the path string in the 'user' collection
-      final ref = _firestore.collection('user').doc(user.uid);
+      await user.reload();
 
-      // Use SetOptions(merge: true) to ensure we don't overwrite existing data
-      await ref.set({'image': imagePath}, SetOptions(merge: true));
-
-      return null; // Success
-    } on FirebaseException catch (e) {
-      return e.message;
-    } catch (e) {
-      return "Image path save failed: $e";
-    }
-  }
-
-  // ✅ NEW: Retrieve the image path from Firestore (Simplified method)
-  Future<String?> getUserImagePath(String uid) async {
-    try {
-      DocumentSnapshot doc = await _firestore.collection('user').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        return doc['image'].toString();
+      // Sync latest Email to Firestore if verified/changed
+      if (user.email != null) {
+        await _firestoreService.updateEmail(user.uid, user.email!);
       }
-      return null;
     } catch (e) {
-      return null;
+      if (kDebugMode) {
+        print("Error reloading user: $e");
+      }
     }
   }
 
@@ -131,33 +128,7 @@ class FirebaseAuthService {
     }
   }
 
-  // ✅ Kept Google Sign-In to prevent app breakage (Commented Out)
-  /*
-  Future<String?> googleSignIn() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return "Google Sign-In cancelled.";
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      await _auth.signInWithCredential(credential);
-      return null;
-    } on FirebaseAuthException catch (e) {
-      return e.message;
-    } catch (e) {
-      return "Google Sign-In failed: $e";
-    }
-  }
-  */
-
   Future<void> signOut() async {
-    // await _googleSignIn.signOut();
     await _auth.signOut();
   }
 }

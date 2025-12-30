@@ -1,49 +1,76 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/firebase_auth_service.dart';
+import '../services/firestore_service.dart';
 
 class FirebaseAuthViewModel with ChangeNotifier {
   final FirebaseAuthService _authService = FirebaseAuthService.instance;
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
   User? _user;
-  String? _profileImagePath; // Local path to image stored in Firestore
+  Map<String, dynamic>? _userData;
+  StreamSubscription<DocumentSnapshot>? _userDocSubscription;
+
   bool _isLoading = false;
   String? _errorMessage;
+  String? _successMessage;
 
   User? get currentUser => _user;
-  String? get profileImagePath => _profileImagePath;
+  Map<String, dynamic>? get userData => _userData;
+  String? get profileImagePath => _userData?['image'] as String?;
+
   bool get isLoggedIn => currentUser != null;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String? get successMessage => _successMessage;
 
   FirebaseAuthViewModel() {
     _user = _authService.currentUser;
-    // Initial fetch if user is already logged in
-    if (_user != null) {
-      _fetchUserProfileImage();
-    }
+    _init();
+  }
 
+  void _init() {
+    // Listen for Auth State Changes
     _authService.authStateChanges.listen((User? user) {
       _user = user;
+
+      _userDocSubscription?.cancel();
+
       if (user != null) {
-        _fetchUserProfileImage();
+        // Use FirestoreService to listen to data
+        _userDocSubscription = _firestoreService
+            .getUserStream(user.uid)
+            .listen(
+              (snapshot) {
+                if (snapshot.exists && snapshot.data() != null) {
+                  _userData = snapshot.data() as Map<String, dynamic>;
+                  notifyListeners();
+                }
+              },
+              onError: (error) {
+                debugPrint("Error listening to user doc: $error");
+              },
+            );
       } else {
-        _profileImagePath = null;
+        _userData = null;
+        notifyListeners();
       }
-      notifyListeners();
     });
   }
 
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
+  @override
+  void dispose() {
+    _userDocSubscription?.cancel();
+    super.dispose();
   }
 
-  /// Helper to fetch the image path from Firestore
-  Future<void> _fetchUserProfileImage() async {
-    if (_user != null) {
-      _profileImagePath = await _authService.getUserImagePath(_user!.uid);
+  void _setLoading(bool loading) {
+    if (_isLoading != loading) {
+      _isLoading = loading;
       notifyListeners();
     }
   }
@@ -52,9 +79,15 @@ class FirebaseAuthViewModel with ChangeNotifier {
     _setLoading(true);
     _errorMessage = null;
     final error = await _authService.loginWithEmailAndPassword(email, password);
-    if (error != null) _errorMessage = error;
-    _setLoading(false);
-    notifyListeners();
+
+    if (error != null) {
+      _errorMessage = error;
+    } else {
+      // Sync Firestore with Auth data immediately upon login
+      await reloadUserData();
+    }
+
+    _setLoading(false); // Handles notification
     return error == null;
   }
 
@@ -65,14 +98,18 @@ class FirebaseAuthViewModel with ChangeNotifier {
   ) async {
     _setLoading(true);
     _errorMessage = null;
+
     final error = await _authService.signUpWithEmailAndPassword(
       email,
       password,
       name,
     );
-    if (error != null) _errorMessage = error;
-    _setLoading(false);
-    notifyListeners();
+
+    if (error != null) {
+      _errorMessage = error;
+    }
+
+    _setLoading(false); // Handles notification
     return error == null;
   }
 
@@ -82,35 +119,46 @@ class FirebaseAuthViewModel with ChangeNotifier {
   }) async {
     _setLoading(true);
     _errorMessage = null;
+    _successMessage = null;
 
-    final error = await _authService.updateUserProfile(
+    final result = await _authService.updateUserProfile(
       name: name,
       email: email,
     );
 
-    if (error != null) {
-      _errorMessage = error;
-    } else {
-      _user = _authService.currentUser;
-      notifyListeners();
-    }
-
     _setLoading(false);
-    return error == null;
+
+    if (result != null) {
+      if (result.contains("Verification email sent")) {
+        _successMessage = result;
+        return true;
+      } else {
+        _errorMessage = result;
+        return false;
+      }
+    } else {
+      _successMessage = "Profile updated successfully";
+      await reloadUserData();
+      return true;
+    }
   }
 
   Future<bool> updateProfilePicture(String imagePath) async {
     _setLoading(true);
     _errorMessage = null;
 
-    final error = await _authService.uploadProfileImage(imagePath);
+    if (_user == null) {
+      _setLoading(false);
+      return false;
+    }
+
+    final error = await _firestoreService.updateProfileImage(
+      _user!.uid,
+      imagePath,
+    );
 
     if (error != null) {
       _errorMessage = error;
-    } else {
-      // Update local state immediately so UI reflects the new image
-      _profileImagePath = imagePath;
-      notifyListeners();
     }
 
     _setLoading(false);
@@ -128,5 +176,18 @@ class FirebaseAuthViewModel with ChangeNotifier {
 
   Future<void> logout() async {
     await _authService.signOut();
+  }
+
+  Future<void> reloadUserData() async {
+    if (_user == null) return;
+
+    await _authService.reloadUser();
+
+    final refreshedUser = _authService.currentUser;
+
+    if (refreshedUser != null) {
+      _user = refreshedUser;
+      notifyListeners();
+    }
   }
 }

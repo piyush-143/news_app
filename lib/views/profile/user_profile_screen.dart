@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:news_app/widgets/custom_loader.dart';
 import 'package:provider/provider.dart';
 
 import '../../view_models/firebase_auth_view_model.dart';
 import '../../widgets/custom_snack_bar.dart';
+import '../auth/login_screen.dart';
 
 /// Screen to view and edit the current user's profile details.
 class UserProfileScreen extends StatefulWidget {
@@ -16,7 +18,8 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  // ... (Dialog Logic remains same)
+  // Removed RefreshIndicator logic and WidgetsBindingObserver
+
   void _showEditDialog(
     BuildContext context,
     String currentName,
@@ -33,102 +36,154 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false, // Prevent dismissing while loading
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: dialogBgColor,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            "Edit Profile",
-            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-          ),
-          content: SizedBox(
-            width: MediaQuery.of(context).size.width,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildDialogTextField(
-                    controller: nameController,
-                    label: "Name",
-                    icon: Icons.person_outline,
-                    fillColor: inputFillColor,
-                    textColor: textColor,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDialogTextField(
-                    controller: emailController,
-                    label: "Email",
-                    icon: Icons.email_outlined,
-                    fillColor: inputFillColor,
-                    textColor: textColor,
-                    maxLines: 1,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Note: Changing email will require verification.",
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                ],
+        // Use Consumer to update the dialog UI when isLoading changes
+        return Consumer<FirebaseAuthViewModel>(
+          builder: (context, authVM, child) {
+            return AlertDialog(
+              backgroundColor: dialogBgColor,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-            ),
-          ),
-          actionsPadding: const EdgeInsets.only(bottom: 20, right: 20),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                "Cancel",
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w600,
+              title: Text(
+                "Edit Profile",
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+              ),
+              content: SizedBox(
+                width: MediaQuery.of(context).size.width,
+                // ✅ UPDATED: Stack to overlay loader in the middle of content
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Form Content (Dimmed when loading)
+                    Opacity(
+                      opacity: authVM.isLoading ? 0.5 : 1.0,
+                      child: Form(
+                        key: formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildDialogTextField(
+                              controller: nameController,
+                              label: "Name",
+                              icon: Icons.person_outline,
+                              fillColor: inputFillColor,
+                              textColor: textColor,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildDialogTextField(
+                              controller: emailController,
+                              label: "Email",
+                              icon: Icons.email_outlined,
+                              fillColor: inputFillColor,
+                              textColor: textColor,
+                              maxLines: 1,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              "Note: Changing email will require verification and re-login.",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Loader in the Center
+                    if (authVM.isLoading)
+                      SizedBox(width: 120, height: 60, child: CustomLoader()),
+                  ],
                 ),
               ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (formKey.currentState!.validate()) {
-                  final authVM = context.read<FirebaseAuthViewModel>();
-
-                  final success = await authVM.updateUserProfile(
-                    name: nameController.text.trim(),
-                    email: emailController.text.trim(),
-                  );
-
-                  if (context.mounted) {
-                    Navigator.pop(context);
-
-                    if (success) {
-                      CustomSnackBar.showSuccess(
-                        context,
-                        "Profile updated successfully",
-                      );
-                    } else {
-                      final error =
-                          authVM.errorMessage ??
-                          "Update failed. Please try again.";
-                      CustomSnackBar.showError(context, error);
-                    }
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+              actionsPadding: const EdgeInsets.only(bottom: 20, right: 20),
+              actions: [
+                TextButton(
+                  // Disable cancel while loading
+                  onPressed: authVM.isLoading
+                      ? null
+                      : () => Navigator.pop(context),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
+                ElevatedButton(
+                  // ✅ UPDATED: Disable button when loading, keep text "Save"
+                  onPressed: authVM.isLoading
+                      ? null
+                      : () async {
+                          if (formKey.currentState!.validate()) {
+                            // Note: We use authVM directly from Consumer
+                            final isEmailChanged =
+                                emailController.text.trim() != currentEmail;
+
+                            final success = await authVM.updateUserProfile(
+                              name: nameController.text.trim(),
+                              email: emailController.text.trim(),
+                            );
+
+                            if (context.mounted) {
+                              Navigator.pop(context); // Close Dialog
+
+                              if (success) {
+                                if (isEmailChanged &&
+                                    (authVM.successMessage?.contains(
+                                          "Verification",
+                                        ) ??
+                                        false)) {
+                                  CustomSnackBar.showInfo(
+                                    context,
+                                    "Verification link sent. Please verify and login again.",
+                                  );
+
+                                  await authVM.logout();
+
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (_) => const LoginScreen(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  }
+                                } else {
+                                  CustomSnackBar.showSuccess(
+                                    context,
+                                    authVM.successMessage ??
+                                        "Profile updated successfully",
+                                  );
+                                }
+                              } else {
+                                final error =
+                                    authVM.errorMessage ?? "Update failed.";
+                                CustomSnackBar.showError(context, error);
+                              }
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: const Text("Save"),
                 ),
-              ),
-              child: const Text("Save"),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
@@ -161,21 +216,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  // ✅ NEW: Picks image from gallery and uploads to Firebase
   Future<void> _pickImage(BuildContext context) async {
     final picker = ImagePicker();
-    // 1. Pick Image
     final pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 70, // Optimize size
+      imageQuality: 70,
     );
 
-    if (pickedFile == null) return; // User cancelled
+    if (pickedFile == null) return;
 
     if (context.mounted) {
       final authVM = context.read<FirebaseAuthViewModel>();
 
-      // 2. Upload Image
       final success = await authVM.updateProfilePicture(pickedFile.path);
 
       if (context.mounted) {
@@ -197,7 +249,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     final fbVM = context.watch<FirebaseAuthViewModel>();
     final user = fbVM.currentUser;
-    final isLoading = fbVM.isLoading; // Watch loading state for spinner
+    final isLoading = fbVM.isLoading;
+    final userData = fbVM.userData;
 
     if (user == null) {
       return const Scaffold(body: Center(child: Text("User not logged in")));
@@ -206,9 +259,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade200;
     final textColor = isDark ? Colors.white : Colors.black;
 
-    // Helper to safely determine if we have a valid image path
-    final hasImage =
-        fbVM.profileImagePath != null && fbVM.profileImagePath!.isNotEmpty;
+    final profilePath = fbVM.profileImagePath;
+    final hasImage = profilePath != null && profilePath.isNotEmpty;
+
+    // Fallbacks
+    final displayName = userData?['name'] ?? user.displayName ?? "Not Set";
+    final displayEmail = userData?['email'] ?? user.email ?? "Not Set";
 
     return Scaffold(
       appBar: AppBar(
@@ -218,12 +274,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         actions: [
           IconButton(
             onPressed: () {
-              _showEditDialog(
-                context,
-                user.displayName ?? "",
-                user.email ?? "",
-                isDark,
-              );
+              _showEditDialog(context, displayName, displayEmail, isDark);
             },
             style: IconButton.styleFrom(
               backgroundColor: isDark
@@ -243,8 +294,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-
-            // --- Profile Image ---
             Center(
               child: Stack(
                 alignment: Alignment.bottomRight,
@@ -264,14 +313,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       backgroundColor: isDark
                           ? Colors.grey.shade800
                           : Colors.indigo.shade50,
-                      // ✅ FIXED: Null-safe check
                       backgroundImage: hasImage
                           ? ResizeImage(
-                              FileImage(File(fbVM.profileImagePath!)),
+                              FileImage(File(profilePath)),
                               width: 500,
                             )
                           : null,
-                      // ✅ FIXED: Only show icon if no image
                       child: !hasImage
                           ? Icon(
                               Icons.person,
@@ -281,8 +328,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           : null,
                     ),
                   ),
-
-                  // Camera Icon Button
                   GestureDetector(
                     onTap: isLoading ? null : () => _pickImage(context),
                     child: Container(
@@ -295,7 +340,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           width: 3,
                         ),
                       ),
-                      // Show Spinner if uploading, else show Camera Icon
                       child: isLoading
                           ? const SizedBox(
                               width: 16,
@@ -315,13 +359,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 40),
-
-            // --- Info Tiles ---
             _buildInfoTile(
               "Full Name",
-              user.displayName ?? "Not Set", // Safely handle null displayName
+              displayName,
               Icons.person_outline_rounded,
               cardColor,
               textColor,
@@ -329,7 +370,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             const SizedBox(height: 16),
             _buildInfoTile(
               "Email Address",
-              user.email ?? "Not Set",
+              displayEmail,
               Icons.email_outlined,
               cardColor,
               textColor,

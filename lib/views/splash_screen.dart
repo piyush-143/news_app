@@ -134,7 +134,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
               // --- Loading Indicator ---
               // 'SpinKitCubeGrid' fits the blocky nature of news layouts well
-              const SpinKitCubeGrid(color: Colors.white, size: 45.0),
+              const SpinKitCubeGrid(
+                color: Colors.white,
+                size: 45.0,
+                duration: Durations.extralong2,
+              ),
             ],
           ),
         ),
