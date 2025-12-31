@@ -6,12 +6,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'firestore_service.dart';
 
 class FirebaseAuthService {
-  // Singleton Pattern
+  // Singleton Pattern to ensure a single instance throughout the app
   FirebaseAuthService._();
   static final FirebaseAuthService instance = FirebaseAuthService._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirestoreService _firestoreService = FirestoreService.instance;
+
+  // Using the specific instance getter as requested
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   bool isInitialized = false;
 
@@ -19,6 +21,8 @@ class FirebaseAuthService {
 
   User? get currentUser => _auth.currentUser;
 
+  /// Registers a new user with Email and Password.
+  /// Also syncs the provided Name to the Auth profile and Firestore.
   Future<String?> signUpWithEmailAndPassword(
     String email,
     String password,
@@ -32,7 +36,8 @@ class FirebaseAuthService {
 
       final user = credential.user;
       if (user != null) {
-        // Optimization: Run Auth update and Firestore save in parallel
+        // Optimization: Update Auth Profile and create Firestore document in parallel
+        // to reduce waiting time for the user.
         await Future.wait([
           user.updateDisplayName(name),
           user.updatePhotoURL(user.photoURL),
@@ -47,6 +52,7 @@ class FirebaseAuthService {
     }
   }
 
+  /// Logs in an existing user with Email and Password.
   Future<String?> loginWithEmailAndPassword(
     String email,
     String password,
@@ -61,9 +67,12 @@ class FirebaseAuthService {
     }
   }
 
+  /// Initializes the Google Sign-In configuration.
+  /// This must be called before authentication.
   Future<void> initGoogleSignIn() async {
     if (!isInitialized) {
       await _googleSignIn.initialize(
+        // Ensure this Client ID matches your Google Cloud Console credentials
         clientId:
             "620311657206-hrn0vkd2krp04dl2170f3ouoroj11r47.apps.googleusercontent.com",
       );
@@ -71,35 +80,52 @@ class FirebaseAuthService {
     isInitialized = true;
   }
 
+  /// Handles the complete Google Sign-In flow including:
+  /// 1. Triggering the Google Authentication dialog.
+  /// 2. Retrieving and verifying access tokens.
+  /// 3. Signing in to Firebase with credentials.
+  /// 4. Syncing user data to Firestore if it's a new user.
   Future<String?> googleSignIn() async {
     try {
       await initGoogleSignIn();
+
+      // 1. Authenticate with Google
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+
+      // 2. Retrieve Tokens
       final idToken = googleUser.authentication.idToken;
+
+      // Attempt to get authorization with specific scopes
       GoogleSignInClientAuthorization? authorization = await googleUser
           .authorizationClient
           .authorizationForScopes(['email', 'profile']);
-      final accessToken = authorization?.accessToken;
+
+      var accessToken = authorization?.accessToken;
+
+      // Fallback logic if access token is missing initially
       if (accessToken == null) {
         final authorization2 = await googleUser.authorizationClient
             .authorizationForScopes(['email', 'profile']);
         if (authorization2?.accessToken == null) {
           return "Access Token Failed. User Different Gmail...";
         }
-        authorization = authorization2;
+        accessToken = authorization2!.accessToken;
       }
+
+      // 3. Create Firebase Credential
       final AuthCredential authCredential = GoogleAuthProvider.credential(
         accessToken: accessToken,
         idToken: idToken,
       );
+
+      // 4. Sign In to Firebase
       final UserCredential userCredential = await _auth.signInWithCredential(
         authCredential,
       );
 
       final user = userCredential.user;
       if (user != null) {
-        // ✅ CHECK IF USER EXISTS BEFORE SAVING
-        // Fetch the document snapshot to see if we already have data for this user
+        // 5. Check if user exists in Firestore to avoid overwriting existing data
         final DocumentSnapshot userDoc = await _firestoreService
             .getUserStream(user.uid)
             .first;
@@ -125,6 +151,9 @@ class FirebaseAuthService {
     }
   }
 
+  /// Updates the user's profile information.
+  /// - Name updates are immediate.
+  /// - Email updates trigger a verification flow.
   Future<String?> updateUserProfile({
     required String name,
     required String email,
@@ -148,6 +177,8 @@ class FirebaseAuthService {
       }
 
       // 2. Handle Email Update
+      // verifyBeforeUpdateEmail sends a verification link to the NEW email.
+      // The actual email property on the user object won't update until clicked.
       if (emailChanged) {
         await user.verifyBeforeUpdateEmail(email);
         await user.reload();
@@ -166,6 +197,8 @@ class FirebaseAuthService {
     }
   }
 
+  /// Refreshes the local user object from the server.
+  /// Useful to check if email verification is complete.
   Future<void> reloadUser() async {
     try {
       final user = _auth.currentUser;
@@ -173,7 +206,7 @@ class FirebaseAuthService {
 
       await user.reload();
 
-      // Sync latest Email to Firestore if verified/changed
+      // Sync latest Email to Firestore if it changed on the server (e.g. after verification)
       if (user.email != null) {
         await _firestoreService.updateEmail(user.uid, user.email!);
       }

@@ -17,7 +17,6 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  // ... (Dialog methods logic remains same)
   void _showEditDialog(
     BuildContext context,
     String currentName,
@@ -53,6 +52,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
+                    // --- Content Layer (Dimmed when loading) ---
                     Opacity(
                       opacity: authVM.isLoading ? 0.5 : 1.0,
                       child: Form(
@@ -68,6 +68,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               textColor: textColor,
                             ),
                             const SizedBox(height: 16),
+
+                            // --- Logic: Hide Email Edit for Google Users ---
+                            // Google users should not change email here as it breaks the OAuth link.
                             !authVM.isGoogleSignIn
                                 ? _buildDialogTextField(
                                     controller: emailController,
@@ -77,8 +80,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     textColor: textColor,
                                     maxLines: 1,
                                   )
-                                : Text(""),
+                                : const SizedBox.shrink(), // Hides field if Google Sign In
+
                             const SizedBox(height: 10),
+
+                            // Show warning only for Email/Password users
                             !authVM.isGoogleSignIn
                                 ? Text(
                                     "Note: Changing email will require verification and re-login.",
@@ -87,11 +93,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                       color: Colors.red.shade500,
                                     ),
                                   )
-                                : Text(''),
+                                : const SizedBox.shrink(),
                           ],
                         ),
                       ),
                     ),
+
+                    // --- Loading Layer ---
                     if (authVM.isLoading)
                       const SizedBox(
                         width: 60,
@@ -129,9 +137,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             );
 
                             if (context.mounted) {
-                              Navigator.pop(context);
+                              Navigator.pop(context); // Close Dialog
 
                               if (success) {
+                                // --- Critical Logic: Email Verification Flow ---
+                                // If email changed, Firebase sends a verification link.
+                                // We must log the user out to force them to re-verify on next login.
                                 if (isEmailChanged &&
                                     (authVM.successMessage?.contains(
                                           "Verification",
@@ -141,7 +152,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     context,
                                     "Verification link sent. Please verify and login again.",
                                   );
+
                                   await authVM.logout();
+
                                   if (context.mounted) {
                                     Navigator.of(context).pushAndRemoveUntil(
                                       MaterialPageRoute(
@@ -151,6 +164,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     );
                                   }
                                 } else {
+                                  // Standard Success (Name update or Image update)
                                   CustomSnackBar.showSuccess(
                                     context,
                                     authVM.successMessage ??
@@ -255,25 +269,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade200;
     final textColor = isDark ? Colors.white : Colors.black;
 
-    // --- UPDATED IMAGE LOGIC ---
-    // 1. Get local Firestore path
+    // --- LOGIC: Image Source Priority ---
+    // 1. Local Firestore Path (If user uploaded a custom image)
     final localPath = fbVM.profileImagePath;
 
-    // 2. Get Google/Network URL from User object
+    // 2. Network URL (If user signed in via Google)
     final networkUrl = user.photoURL;
 
-    // 3. Determine which ImageProvider to use
+    // 3. Select Provider
     ImageProvider? imageProvider;
-
     if (localPath != null && localPath.isNotEmpty) {
-      // If local path exists, try to use it
       imageProvider = FileImage(File(localPath));
     } else if (networkUrl != null && networkUrl.isNotEmpty) {
-      // Fallback to Google Image if no local path
       imageProvider = NetworkImage(networkUrl);
     }
 
-    // Fallbacks for Text
+    // --- LOGIC: Text Data Fallbacks ---
+    // Prefer Firestore data > Auth Data > "Not Set"
     final displayName = userData?['name'] ?? user.displayName ?? "Not Set";
     final displayEmail = userData?['email'] ?? user.email ?? "Not Set";
 
@@ -324,9 +336,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       backgroundColor: isDark
                           ? Colors.grey.shade800
                           : Colors.indigo.shade50,
-                      // ✅ UPDATED: Correctly uses either FileImage OR NetworkImage
                       backgroundImage: imageProvider,
-                      // Only show icon if provider is null
+                      // Show generic Icon ONLY if no image provider could be determined
                       child: (imageProvider == null)
                           ? Icon(
                               Icons.person,
@@ -337,6 +348,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                   ),
                   GestureDetector(
+                    // Disable picker while other actions are loading
                     onTap: isLoading ? null : () => _pickImage(context),
                     child: Container(
                       padding: const EdgeInsets.all(8),

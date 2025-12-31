@@ -13,7 +13,7 @@ class FirebaseAuthViewModel with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService.instance;
 
   User? _user;
-  Map<String, dynamic>? _userData;
+  Map<String, dynamic>? _userData; // Holds real-time data from Firestore
   StreamSubscription<DocumentSnapshot>? _userDocSubscription;
 
   bool _isLoading = false;
@@ -23,6 +23,8 @@ class FirebaseAuthViewModel with ChangeNotifier {
 
   User? get currentUser => _user;
   Map<String, dynamic>? get userData => _userData;
+
+  // Safely extract the image path from the Firestore data map
   String? get profileImagePath => _userData?['image'] as String?;
 
   bool get isLoggedIn => currentUser != null;
@@ -32,17 +34,22 @@ class FirebaseAuthViewModel with ChangeNotifier {
   bool get isGoogleSignIn => _isGoogleSignIn;
 
   FirebaseAuthViewModel() {
+    // Initialize user synchronously to prevent "Not Logged In" flash on app restart
     _user = _authService.currentUser;
     _init();
   }
 
   void _init() {
+    // Listen for Auth State Changes (Login/Logout events)
     _authService.authStateChanges.listen((User? user) {
       _user = user;
 
+      // Cancel previous Firestore subscription to avoid memory leaks
       _userDocSubscription?.cancel();
 
       if (user != null) {
+        // If logged in, subscribe to the specific user's Firestore document
+        // This ensures the UI updates immediately when data (like Name/Image) changes in the DB
         _userDocSubscription = _firestoreService
             .getUserStream(user.uid)
             .listen(
@@ -57,6 +64,7 @@ class FirebaseAuthViewModel with ChangeNotifier {
               },
             );
       } else {
+        // If logged out, clear local user data
         _userData = null;
         notifyListeners();
       }
@@ -76,11 +84,13 @@ class FirebaseAuthViewModel with ChangeNotifier {
     }
   }
 
+  /// Persists the Google Sign-In state to SharedPreferences.
+  /// Used to conditionally hide UI elements (like Email Edit) for Google users.
   Future<void> setGoogleSignIn(bool isGoogle) async {
     if (_isGoogleSignIn != isGoogle) {
       _isGoogleSignIn = isGoogle;
       final prefs = await SharedPreferences.getInstance();
-      prefs.setBool('isGoogleSignIn', isGoogle);
+      await prefs.setBool('isGoogleSignIn', isGoogle);
       notifyListeners();
     }
   }
@@ -93,6 +103,7 @@ class FirebaseAuthViewModel with ChangeNotifier {
     if (error != null) {
       _errorMessage = error;
     } else {
+      // Sync Firestore with Auth data immediately upon login
       await reloadUserData();
     }
 
@@ -122,20 +133,17 @@ class FirebaseAuthViewModel with ChangeNotifier {
     return error == null;
   }
 
-  // ✅ UPDATED: Enabled actual call to Service for Google Sign In
   Future<bool> googleSignIn() async {
     _setLoading(true);
     _errorMessage = null;
 
-    // Calls the active googleSignIn method in the service
     final error = await _authService.googleSignIn();
 
     if (error != null) {
       _errorMessage = error;
     } else {
+      // Flag session as Google Sign-In and sync data
       await setGoogleSignIn(true);
-      // Sync data immediately on success
-
       await reloadUserData();
     }
 
@@ -159,6 +167,7 @@ class FirebaseAuthViewModel with ChangeNotifier {
     _setLoading(false);
 
     if (result != null) {
+      // If result contains "Verification", it's a specific success case requiring logout
       if (result.contains("Verification email sent")) {
         _successMessage = result;
         return true;
@@ -182,6 +191,7 @@ class FirebaseAuthViewModel with ChangeNotifier {
       return false;
     }
 
+    // Update Firestore directly; the _init() stream will update the UI automatically
     final error = await _firestoreService.updateProfileImage(
       _user!.uid,
       imagePath,
@@ -205,10 +215,13 @@ class FirebaseAuthViewModel with ChangeNotifier {
   }
 
   Future<void> logout() async {
-    setGoogleSignIn(false);
+    // Reset Google Sign-In flag on logout
+    await setGoogleSignIn(false);
     await _authService.signOut();
   }
 
+  /// Forces a refresh of the User object from Firebase Auth
+  /// and updates local state. Useful after email verification.
   Future<void> reloadUserData() async {
     if (_user == null) return;
 
