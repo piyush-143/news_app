@@ -140,14 +140,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // --- Header Section ---
-                    Image.asset(
-                      "assets/logo.png",
-                      width: 140,
-                      height: 140,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.newspaper,
-                        size: 100,
-                        color: Colors.indigo,
+                    Container(
+                      padding: EdgeInsets.all(11),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.grey.shade700
+                            : Colors.indigo.shade100.withAlpha(150),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Image.asset(
+                        "assets/logo.png",
+                        width: 140,
+                        height: 140,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                              Icons.newspaper,
+                              size: 100,
+                              color: Colors.indigo,
+                            ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -165,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
 
                     // --- Email Field ---
                     TextFormField(
@@ -285,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                     ),
 
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 20),
 
                     // --- OR Divider ---
                     Row(
@@ -305,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 20),
 
                     // --- Modern Google Sign In Button ---
                     InkWell(
@@ -385,11 +395,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             );
                           },
-                          child: const Text(
+                          child: Text(
                             "Sign Up",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.indigo,
+                              fontSize: 17,
                             ),
                           ),
                         ),

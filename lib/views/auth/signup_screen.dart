@@ -108,35 +108,6 @@ class _SignupScreenState extends State<SignupScreen> {
     final googleBtnBorder = Colors.grey.shade500;
     final googleBtnText = isDark ? Colors.white : Colors.black87;
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading:
-            false, // Custom back flow handled via buttons
-        actionsPadding: const EdgeInsets.only(right: 15, top: 10),
-        actions: [
-          // --- Skip Button (Guest Mode) ---
-          TextButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const MainController()),
-              );
-            },
-            style: OutlinedButton.styleFrom(
-              backgroundColor: Colors.indigo,
-              alignment: Alignment.topCenter,
-            ),
-            child: const Text(
-              "Skip",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 15),
-        ],
-      ),
       // GestureDetector closes keyboard when tapping background
       body: GestureDetector(
         onTap: () {
@@ -155,19 +126,30 @@ class _SignupScreenState extends State<SignupScreen> {
                   children: [
                     // --- Header ---
                     // Error builder ensures app doesn't crash if asset is missing
-                    Image.asset(
-                      "assets/logo.png",
-                      width: 140,
-                      height: 140,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.newspaper,
-                        size: 100,
-                        color: Colors.indigo,
+                    Container(
+                      padding: EdgeInsets.all(11),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.grey.shade700
+                            : Colors.indigo.shade100.withAlpha(150),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Image.asset(
+                        "assets/logo.png",
+                        width: 140,
+                        height: 140,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                              Icons.newspaper,
+                              size: 100,
+                              color: Colors.indigo,
+                            ),
                       ),
                     ),
                     const SizedBox(height: 20),
                     const Text(
                       "Create Account",
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -176,9 +158,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     const SizedBox(height: 8),
                     const Text(
                       "Join us and stay updated with the latest news",
+                      textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
 
                     // --- Name Field ---
                     TextFormField(
@@ -300,7 +283,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                             ),
                     ),
-                    SizedBox(height: 22),
+                    SizedBox(height: 20),
                     // --- OR Divider ---
                     Row(
                       children: [
@@ -319,7 +302,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 20),
 
                     // --- Modern Google Sign In Button ---
                     InkWell(
@@ -396,11 +379,12 @@ class _SignupScreenState extends State<SignupScreen> {
                             FocusScope.of(context).requestFocus(FocusNode());
                             Navigator.pop(context);
                           },
-                          child: const Text(
+                          child: Text(
                             "Login",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.indigo,
+                              fontSize: 17,
                             ),
                           ),
                         ),
