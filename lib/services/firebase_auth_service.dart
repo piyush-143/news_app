@@ -149,7 +149,7 @@ class FirebaseAuthService {
 
       // 2. Handle Email Update
       if (emailChanged) {
-        await user.verifyBeforeUpdateEmail(email!);
+        await user.verifyBeforeUpdateEmail(email);
         await user.reload();
         return "Verification email sent to $email. Please check your inbox.";
       }
