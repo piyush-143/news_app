@@ -73,6 +73,24 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  Future<void> _googleSignIn() async {
+    final authVM = context.read<FirebaseAuthViewModel>();
+    final success = await authVM.googleSignIn();
+
+    // Async gap check
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainController()),
+      );
+    } else {
+      final error = authVM.errorMessage ?? "SignUp failed. Please try again.";
+      CustomSnackBar.showError(context, error);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -85,7 +103,10 @@ class _SignupScreenState extends State<SignupScreen> {
     final isPasswordVisible = context
         .watch<ToggleViewModel>()
         .isSignupPasswordVisible;
-
+    // Theme-based colors for the new button
+    final googleBtnBg = isDark ? Colors.grey.shade800 : Colors.white;
+    final googleBtnBorder = Colors.grey.shade500;
+    final googleBtnText = isDark ? Colors.white : Colors.black87;
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading:
@@ -278,6 +299,89 @@ class _SignupScreenState extends State<SignupScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                    ),
+                    SizedBox(height: 22),
+                    // --- OR Divider ---
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.grey.shade400)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            "OR",
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Colors.grey.shade400)),
+                      ],
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // --- Modern Google Sign In Button ---
+                    InkWell(
+                      onTap: isLoading ? null : _googleSignIn,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: googleBtnBg,
+                          border: Border.all(color: googleBtnBorder),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: isLoading
+                            ? const CustomLoader(color: Colors.indigo, size: 24)
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Google Logo (Network Image with fallback)
+                                  Image.asset(
+                                    "assets/google_logo.png",
+                                    height: 24,
+                                    width: 24,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      // Fallback to a styled 'G' text if image fails
+                                      return Container(
+                                        width: 29,
+                                        height: 29,
+                                        alignment: Alignment.center,
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.indigo,
+                                        ),
+                                        child: const Text(
+                                          "G",
+                                          style: TextStyle(
+                                            fontSize: 19,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    "Continue with Google",
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                      color: googleBtnText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
                     ),
 
                     // --- Footer / Login Link ---

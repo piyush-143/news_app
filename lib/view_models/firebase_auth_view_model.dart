@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
@@ -16,6 +17,7 @@ class FirebaseAuthViewModel with ChangeNotifier {
   StreamSubscription<DocumentSnapshot>? _userDocSubscription;
 
   bool _isLoading = false;
+  bool _isGoogleSignIn = false;
   String? _errorMessage;
   String? _successMessage;
 
@@ -27,6 +29,7 @@ class FirebaseAuthViewModel with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
+  bool get isGoogleSignIn => _isGoogleSignIn;
 
   FirebaseAuthViewModel() {
     _user = _authService.currentUser;
@@ -34,14 +37,12 @@ class FirebaseAuthViewModel with ChangeNotifier {
   }
 
   void _init() {
-    // Listen for Auth State Changes
     _authService.authStateChanges.listen((User? user) {
       _user = user;
 
       _userDocSubscription?.cancel();
 
       if (user != null) {
-        // Use FirestoreService to listen to data
         _userDocSubscription = _firestoreService
             .getUserStream(user.uid)
             .listen(
@@ -75,6 +76,15 @@ class FirebaseAuthViewModel with ChangeNotifier {
     }
   }
 
+  Future<void> setGoogleSignIn(bool isGoogle) async {
+    if (_isGoogleSignIn != isGoogle) {
+      _isGoogleSignIn = isGoogle;
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setBool('isGoogleSignIn', isGoogle);
+      notifyListeners();
+    }
+  }
+
   Future<bool> loginWithEmailAndPassword(String email, String password) async {
     _setLoading(true);
     _errorMessage = null;
@@ -83,11 +93,10 @@ class FirebaseAuthViewModel with ChangeNotifier {
     if (error != null) {
       _errorMessage = error;
     } else {
-      // Sync Firestore with Auth data immediately upon login
       await reloadUserData();
     }
 
-    _setLoading(false); // Handles notification
+    _setLoading(false);
     return error == null;
   }
 
@@ -109,7 +118,28 @@ class FirebaseAuthViewModel with ChangeNotifier {
       _errorMessage = error;
     }
 
-    _setLoading(false); // Handles notification
+    _setLoading(false);
+    return error == null;
+  }
+
+  // ✅ UPDATED: Enabled actual call to Service for Google Sign In
+  Future<bool> googleSignIn() async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    // Calls the active googleSignIn method in the service
+    final error = await _authService.googleSignIn();
+
+    if (error != null) {
+      _errorMessage = error;
+    } else {
+      await setGoogleSignIn(true);
+      // Sync data immediately on success
+
+      await reloadUserData();
+    }
+
+    _setLoading(false);
     return error == null;
   }
 
@@ -175,6 +205,7 @@ class FirebaseAuthViewModel with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    setGoogleSignIn(false);
     await _authService.signOut();
   }
 

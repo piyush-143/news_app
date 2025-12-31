@@ -9,7 +9,6 @@ import '../../view_models/firebase_auth_view_model.dart';
 import '../../widgets/custom_snack_bar.dart';
 import '../auth/login_screen.dart';
 
-/// Screen to view and edit the current user's profile details.
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
 
@@ -18,8 +17,7 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  // Removed RefreshIndicator logic and WidgetsBindingObserver
-
+  // ... (Dialog methods logic remains same)
   void _showEditDialog(
     BuildContext context,
     String currentName,
@@ -36,9 +34,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing while loading
+      barrierDismissible: false,
       builder: (context) {
-        // Use Consumer to update the dialog UI when isLoading changes
         return Consumer<FirebaseAuthViewModel>(
           builder: (context, authVM, child) {
             return AlertDialog(
@@ -53,11 +50,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               content: SizedBox(
                 width: MediaQuery.of(context).size.width,
-                // ✅ UPDATED: Stack to overlay loader in the middle of content
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Form Content (Dimmed when loading)
                     Opacity(
                       opacity: authVM.isLoading ? 0.5 : 1.0,
                       child: Form(
@@ -73,36 +68,42 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               textColor: textColor,
                             ),
                             const SizedBox(height: 16),
-                            _buildDialogTextField(
-                              controller: emailController,
-                              label: "Email",
-                              icon: Icons.email_outlined,
-                              fillColor: inputFillColor,
-                              textColor: textColor,
-                              maxLines: 1,
-                            ),
+                            !authVM.isGoogleSignIn
+                                ? _buildDialogTextField(
+                                    controller: emailController,
+                                    label: "Email",
+                                    icon: Icons.email_outlined,
+                                    fillColor: inputFillColor,
+                                    textColor: textColor,
+                                    maxLines: 1,
+                                  )
+                                : Text(""),
                             const SizedBox(height: 10),
-                            Text(
-                              "Note: Changing email will require verification and re-login.",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
+                            !authVM.isGoogleSignIn
+                                ? Text(
+                                    "Note: Changing email will require verification and re-login.",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.red.shade500,
+                                    ),
+                                  )
+                                : Text(''),
                           ],
                         ),
                       ),
                     ),
-                    // Loader in the Center
                     if (authVM.isLoading)
-                      SizedBox(width: 120, height: 60, child: CustomLoader()),
+                      const SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: CustomLoader(size: 40),
+                      ),
                   ],
                 ),
               ),
               actionsPadding: const EdgeInsets.only(bottom: 20, right: 20),
               actions: [
                 TextButton(
-                  // Disable cancel while loading
                   onPressed: authVM.isLoading
                       ? null
                       : () => Navigator.pop(context),
@@ -115,12 +116,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                 ),
                 ElevatedButton(
-                  // ✅ UPDATED: Disable button when loading, keep text "Save"
                   onPressed: authVM.isLoading
                       ? null
                       : () async {
                           if (formKey.currentState!.validate()) {
-                            // Note: We use authVM directly from Consumer
                             final isEmailChanged =
                                 emailController.text.trim() != currentEmail;
 
@@ -130,7 +129,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             );
 
                             if (context.mounted) {
-                              Navigator.pop(context); // Close Dialog
+                              Navigator.pop(context);
 
                               if (success) {
                                 if (isEmailChanged &&
@@ -142,9 +141,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     context,
                                     "Verification link sent. Please verify and login again.",
                                   );
-
                                   await authVM.logout();
-
                                   if (context.mounted) {
                                     Navigator.of(context).pushAndRemoveUntil(
                                       MaterialPageRoute(
@@ -227,7 +224,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     if (context.mounted) {
       final authVM = context.read<FirebaseAuthViewModel>();
-
       final success = await authVM.updateProfilePicture(pickedFile.path);
 
       if (context.mounted) {
@@ -259,10 +255,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade200;
     final textColor = isDark ? Colors.white : Colors.black;
 
-    final profilePath = fbVM.profileImagePath;
-    final hasImage = profilePath != null && profilePath.isNotEmpty;
+    // --- UPDATED IMAGE LOGIC ---
+    // 1. Get local Firestore path
+    final localPath = fbVM.profileImagePath;
 
-    // Fallbacks
+    // 2. Get Google/Network URL from User object
+    final networkUrl = user.photoURL;
+
+    // 3. Determine which ImageProvider to use
+    ImageProvider? imageProvider;
+
+    if (localPath != null && localPath.isNotEmpty) {
+      // If local path exists, try to use it
+      imageProvider = FileImage(File(localPath));
+    } else if (networkUrl != null && networkUrl.isNotEmpty) {
+      // Fallback to Google Image if no local path
+      imageProvider = NetworkImage(networkUrl);
+    }
+
+    // Fallbacks for Text
     final displayName = userData?['name'] ?? user.displayName ?? "Not Set";
     final displayEmail = userData?['email'] ?? user.email ?? "Not Set";
 
@@ -313,13 +324,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       backgroundColor: isDark
                           ? Colors.grey.shade800
                           : Colors.indigo.shade50,
-                      backgroundImage: hasImage
-                          ? ResizeImage(
-                              FileImage(File(profilePath)),
-                              width: 500,
-                            )
-                          : null,
-                      child: !hasImage
+                      // ✅ UPDATED: Correctly uses either FileImage OR NetworkImage
+                      backgroundImage: imageProvider,
+                      // Only show icon if provider is null
+                      child: (imageProvider == null)
                           ? Icon(
                               Icons.person,
                               size: 60,

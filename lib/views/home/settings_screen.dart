@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:news_app/view_models/index_view_model.dart';
 import 'package:provider/provider.dart';
 
 import '../../view_models/firebase_auth_view_model.dart';
@@ -232,6 +233,7 @@ class SettingsScreen extends StatelessWidget {
               // --- 4. Auth Action Button ---
               TextButton(
                 onPressed: () async {
+                  context.read<IndexViewModel>().reset();
                   await fbVM.logout();
                   if (context.mounted) {
                     Navigator.pushAndRemoveUntil(

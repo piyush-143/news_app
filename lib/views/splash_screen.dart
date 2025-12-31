@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../view_models/firebase_auth_view_model.dart';
 import 'auth/login_screen.dart';
@@ -38,6 +39,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // 4. Navigate
     if (isLoggedIn) {
+      final prefs = await SharedPreferences.getInstance();
+      final isGoogleSignIn = prefs.getBool('isGoogleSignIn') ?? false;
+      authViewModel.setGoogleSignIn(isGoogleSignIn);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainController()),
