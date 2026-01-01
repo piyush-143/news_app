@@ -70,7 +70,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             const SizedBox(height: 16),
 
                             // --- Logic: Hide Email Edit for Google Users ---
-                            // Google users should not change email here as it breaks the OAuth link.
                             !authVM.isGoogleSignIn
                                 ? _buildDialogTextField(
                                     controller: emailController,
@@ -140,9 +139,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               Navigator.pop(context); // Close Dialog
 
                               if (success) {
-                                // --- Critical Logic: Email Verification Flow ---
-                                // If email changed, Firebase sends a verification link.
-                                // We must log the user out to force them to re-verify on next login.
                                 if (isEmailChanged &&
                                     (authVM.successMessage?.contains(
                                           "Verification",
@@ -164,7 +160,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     );
                                   }
                                 } else {
-                                  // Standard Success (Name update or Image update)
                                   CustomSnackBar.showSuccess(
                                     context,
                                     authVM.successMessage ??
@@ -269,23 +264,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade200;
     final textColor = isDark ? Colors.white : Colors.black;
 
-    // --- LOGIC: Image Source Priority ---
-    // 1. Local Firestore Path (If user uploaded a custom image)
+    // --- UPDATED IMAGE LOGIC ---
+    // 1. Get local Firestore path
     final localPath = fbVM.profileImagePath;
 
-    // 2. Network URL (If user signed in via Google)
+    // 2. Check if that file actually exists on THIS device
+    // (This fixes the issue on re-install where path exists in DB but file is gone)
+    bool localFileExists = false;
+    if (localPath != null && localPath.isNotEmpty) {
+      localFileExists = File(localPath).existsSync();
+    }
+
+    // 3. Get Google/Network URL from User object
     final networkUrl = user.photoURL;
 
-    // 3. Select Provider
+    // 4. Select Provider
     ImageProvider? imageProvider;
-    if (localPath != null && localPath.isNotEmpty) {
-      imageProvider = FileImage(File(localPath));
+    if (localFileExists) {
+      imageProvider = FileImage(File(localPath!));
     } else if (networkUrl != null && networkUrl.isNotEmpty) {
       imageProvider = NetworkImage(networkUrl);
     }
 
     // --- LOGIC: Text Data Fallbacks ---
-    // Prefer Firestore data > Auth Data > "Not Set"
     final displayName = userData?['name'] ?? user.displayName ?? "Not Set";
     final displayEmail = userData?['email'] ?? user.email ?? "Not Set";
 

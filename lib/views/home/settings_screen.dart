@@ -29,18 +29,26 @@ class SettingsScreen extends StatelessWidget {
     // Consumer2 allows us to listen to BOTH Theme changes and Auth changes
     return Consumer2<ThemeViewModel, FirebaseAuthViewModel>(
       builder: (context, themeVM, fbVM, child) {
-        // --- Determine Image Source ---
-        ImageProvider? avatarImage;
-        if (fbVM.profileImagePath != null &&
-            fbVM.profileImagePath!.isNotEmpty) {
-          // 1. Prioritize local file path
-          avatarImage = ResizeImage(
-            FileImage(File(fbVM.profileImagePath!)),
-            width: 100, // Optimize memory for small avatar
-          );
-        } else if (fbVM.currentUser?.photoURL != null) {
-          // 2. Fallback to Firebase Storage URL
-          avatarImage = NetworkImage(fbVM.currentUser!.photoURL!);
+        // --- UPDATED IMAGE LOGIC ---
+        // 1. Get local Firestore path
+        final localPath = fbVM.profileImagePath;
+
+        // 2. Check if that file actually exists on THIS device
+        // (This fixes the issue on re-install where path exists in DB but file is gone)
+        bool localFileExists = false;
+        if (localPath != null && localPath.isNotEmpty) {
+          localFileExists = File(localPath).existsSync();
+        }
+
+        // 3. Get Google/Network URL from User object
+        final networkUrl = fbVM.currentUser?.photoURL;
+
+        // 4. Select Provider
+        ImageProvider? imageProvider;
+        if (localFileExists) {
+          imageProvider = ResizeImage(FileImage(File(localPath!)));
+        } else if (networkUrl != null && networkUrl.isNotEmpty) {
+          imageProvider = NetworkImage(networkUrl);
         }
 
         return Scaffold(
@@ -65,9 +73,9 @@ class SettingsScreen extends StatelessWidget {
                     backgroundColor: isDark
                         ? Colors.grey.shade800
                         : Colors.indigo.shade50,
-                    backgroundImage: avatarImage,
+                    backgroundImage: imageProvider,
                     // Only show Icon if there is no image
-                    child: (avatarImage == null)
+                    child: (imageProvider == null)
                         ? Icon(
                             Icons.person,
                             size: 25,
