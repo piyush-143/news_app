@@ -37,13 +37,12 @@ Security and user experience are paramount; the app features secure **Google Aut
 * **Secure Google Sign-In:** Log in quickly and securely using your existing Google account. No need to remember new passwords.
 * **Session Persistence:** Once logged in, the app remembers you. Close the app, restart your phone, or switch tasks—your session remains active until you explicitly log out.
 * **Dark & Light Mode:** Switch seamlessly between dark and light themes. Whether you prefer a sleek dark look for night reading or a bright interface for the day, the app adapts to your preference.
-* **Featured News:** A curated selection of high-impact stories hand-picked to keep you informed on the most critical topics of the day.
 * **Breaking News:** Real-time alerts and updates. Never miss a major event as it unfolds with our dedicated breaking news section.
 * **Nation:** Stay rooted with extensive coverage of national affairs. Get the latest political, social, and economic updates specific to your country.
 * **World:** Go beyond borders with comprehensive international reporting. Understand global perspectives on key issues affecting the planet.
 * **Trending:** See what everyone is talking about. Discover the most popular and shared stories across social media and the web.
 * **Category:** Filter news by your specific interests. Browse seamlessly through diverse categories such as Business, Technology, Entertainment, Health, Science, and Sports.
-* **In-App Web View:** Read the full story without leaving the application. News App integrates a smooth web view experience for reading original source articles.
+* **In-App Web View:** Read the full story without leaving the application. The News App offers a seamless web view experience for reading source articles.
 
 ---
 ## 📂 Project Structure
