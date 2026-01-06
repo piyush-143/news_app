@@ -46,7 +46,7 @@ class SettingsScreen extends StatelessWidget {
         // 4. Select Provider
         ImageProvider? imageProvider;
         if (localFileExists) {
-          imageProvider = ResizeImage(FileImage(File(localPath!)));
+          imageProvider = ResizeImage(FileImage(File(localPath!)), width: 100);
         } else if (networkUrl != null && networkUrl.isNotEmpty) {
           imageProvider = NetworkImage(networkUrl);
         }
