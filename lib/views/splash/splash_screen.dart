@@ -5,9 +5,9 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../view_models/firebase_auth_view_model.dart';
-import 'auth/login_screen.dart';
-import 'home/main_controller.dart';
+import '../../view_models/firebase_auth_view_model.dart';
+import '../auth/login_screen.dart';
+import '../home/main_controller.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -42,6 +42,9 @@ class _SplashScreenState extends State<SplashScreen> {
       final prefs = await SharedPreferences.getInstance();
       final isGoogleSignIn = prefs.getBool('isGoogleSignIn') ?? false;
       authViewModel.setGoogleSignIn(isGoogleSignIn);
+      
+      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainController()),

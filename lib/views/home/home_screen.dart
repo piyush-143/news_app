@@ -5,6 +5,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../../models/news_response_model.dart';
 import '../../services/utils/app_urls.dart';
+import '../../utils/size_config.dart';
 import '../../view_models/index_view_model.dart';
 import '../../view_models/news_view_model.dart';
 import '../../views/home/see_all_screen.dart';
@@ -22,65 +23,84 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Listen to changes in News and UI State
     final newsProvider = context.watch<NewsViewModel>();
     final indexProvider = context.watch<IndexViewModel>();
 
-    // Determine currently selected category
     final selectedCategoryIndex = indexProvider.selectedCategoryIndex;
     final selectedCategoryName = newsProvider.categories[selectedCategoryIndex];
 
-    // Get data for the selected category (might be null if not fetched yet)
-    final categoryNewsModel = newsProvider.getNewsByCategory(
-      selectedCategoryName,
-    );
+    final categoryNewsModel = newsProvider.getNewsByCategory(selectedCategoryName);
     final featuredNews = newsProvider.featuredNewsList;
 
-    // Error Handling: Check specific errors for Featured vs Main List
     final featuredError = newsProvider.getErrorForCategory("featured");
-
-    // If "All" is selected, we check 'recent' errors, otherwise the specific category error
     final listError = selectedCategoryName == "All"
         ? newsProvider.getErrorForCategory("recent")
         : newsProvider.getErrorForCategory(selectedCategoryName);
 
     return Scaffold(
-      appBar: AppBar(titleSpacing: 24, title: const Text("Discover")),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(80.h),
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Good Morning",
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    Text(
+                      "Discover",
+                      style: TextStyle(
+                        fontSize: 28.sp,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : Colors.black,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.notifications_none_rounded, size: 24.w),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: EdgeInsets.symmetric(horizontal: 24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "News from around the world",
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 24),
+            // Removed standard subtitle because it's now in the header
+            SizedBox(height: 24.h),
 
-            // --- 1. Horizontal Category Selector ---
             SizedBox(
-              height: 45,
+              height: 45.h,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: newsProvider.categories.length,
-                clipBehavior:
-                    Clip.none, // Allow shadow/elevation to paint outside bounds
+                clipBehavior: Clip.none,
                 itemBuilder: (context, index) {
                   final category = newsProvider.categories[index];
                   return GestureDetector(
                     onTap: () {
-                      // Update UI selection immediately
-                      context.read<IndexViewModel>().setSelectedCategoryIndex(
-                        index,
-                      );
-
-                      // LAZY LOADING STRATEGY:
-                      // We only fetch data if it hasn't been loaded yet.
-                      // This saves bandwidth by not fetching "Sports" until the user actually clicks "Sports".
+                      context.read<IndexViewModel>().setSelectedCategoryIndex(index);
                       if (newsProvider.getNewsByCategory(category) == null) {
                         _fetchCategoryData(context, category);
                       }
@@ -93,9 +113,8 @@ class HomeScreen extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: 32.h),
 
-            // --- 2. Featured News Carousel ---
             SectionHeader(
               title: "Featured",
               onTap: () {
@@ -103,41 +122,30 @@ class HomeScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => SeeAllScreen(
-                        title: "Featured News",
-                        news: featuredNews,
-                      ),
+                      builder: (context) => SeeAllScreen(title: "Featured News", news: featuredNews),
                     ),
                   );
                 }
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
 
-            // Logic: Data Exists ? Show Carousel : (Error ? Show Retry : Show Loader)
             if (featuredNews != null) ...[
               if (featuredNews.articles.isNotEmpty) ...[
                 CarouselSlider.builder(
-                  itemCount: featuredNews.articles.length > 5
-                      ? 5
-                      : featuredNews.articles.length,
+                  itemCount: featuredNews.articles.length > 5 ? 5 : featuredNews.articles.length,
                   itemBuilder: (context, index, realIndex) {
                     return GestureDetector(
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              DetailScreen(news: featuredNews.articles[index]),
-                        ),
+                        MaterialPageRoute(builder: (_) => DetailScreen(news: featuredNews.articles[index])),
                       ),
-                      child: FeaturedNewsCard(
-                        news: featuredNews.articles[index],
-                      ),
+                      child: FeaturedNewsCard(news: featuredNews.articles[index]),
                     );
                   },
                   options: CarouselOptions(
                     initialPage: indexProvider.sliderIndex,
-                    height: 420,
+                    height: 420.h,
                     autoPlay: true,
                     autoPlayInterval: const Duration(seconds: 3),
                     viewportFraction: 1,
@@ -147,55 +155,42 @@ class HomeScreen extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 15),
+                SizedBox(height: 15.h),
                 Center(
                   child: AnimatedSmoothIndicator(
                     activeIndex: indexProvider.sliderIndex,
-                    count: featuredNews.articles.length > 5
-                        ? 5
-                        : featuredNews.articles.length,
+                    count: featuredNews.articles.length > 5 ? 5 : featuredNews.articles.length,
                     duration: const Duration(milliseconds: 500),
                     effect: WormEffect(
                       activeDotColor: isDark ? Colors.white : Colors.indigo,
-                      dotColor: isDark
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade300,
-                      dotWidth: 17,
-                      dotHeight: 17,
+                      dotColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                      dotWidth: 14.w,
+                      dotHeight: 14.w,
                     ),
                   ),
                 ),
               ] else
-                const Text("No featured news available"),
+                Text("No featured news available", style: TextStyle(fontSize: 14.sp)),
             ] else if (featuredError != null) ...[
               _buildErrorWidget(context, featuredError, () {
-                context.read<NewsViewModel>().getNews(
-                  AppUrls.featured,
-                  "featured",
-                );
+                context.read<NewsViewModel>().getNews(AppUrls.featured, "featured");
               }),
             ] else ...[
-              const Padding(
-                padding: EdgeInsets.all(70),
-                child: Center(child: CustomLoader()),
+              Padding(
+                padding: EdgeInsets.all(70.w),
+                child: Center(child: CustomLoader(size: 40.w)),
               ),
             ],
 
-            const SizedBox(height: 32),
+            SizedBox(height: 32.h),
 
-            // --- 3. News List Sections ---
-            // If "All" is selected, we show a dashboard of multiple topics.
-            // If a specific category is selected, we only show that list.
             if (selectedCategoryName == "All") ...[
               _buildNewsSection(
                 context,
                 title: "Recent News",
                 data: newsProvider.recentNewsList,
                 error: newsProvider.getErrorForCategory("recent"),
-                onRetry: () => context.read<NewsViewModel>().getNews(
-                  AppUrls.recent,
-                  "recent",
-                ),
+                onRetry: () => context.read<NewsViewModel>().getNews(AppUrls.recent, "recent"),
                 isDark: isDark,
               ),
               _buildNewsSection(
@@ -203,10 +198,7 @@ class HomeScreen extends StatelessWidget {
                 title: "Nation News",
                 data: newsProvider.nationNews,
                 error: newsProvider.getErrorForCategory("nation"),
-                onRetry: () => context.read<NewsViewModel>().getNews(
-                  AppUrls.nation,
-                  "nation",
-                ),
+                onRetry: () => context.read<NewsViewModel>().getNews(AppUrls.nation, "nation"),
                 isDark: isDark,
               ),
               _buildNewsSection(
@@ -214,67 +206,45 @@ class HomeScreen extends StatelessWidget {
                 title: "World News",
                 data: newsProvider.worldNews,
                 error: newsProvider.getErrorForCategory("world"),
-                onRetry: () => context.read<NewsViewModel>().getNews(
-                  AppUrls.world,
-                  "world",
-                ),
+                onRetry: () => context.read<NewsViewModel>().getNews(AppUrls.world, "world"),
                 isDark: isDark,
               ),
             ] else ...[
-              // Specific Category View
               _buildNewsSection(
                 context,
                 title: "$selectedCategoryName News",
                 data: categoryNewsModel,
                 error: listError,
-                onRetry: () =>
-                    _fetchCategoryData(context, selectedCategoryName),
+                onRetry: () => _fetchCategoryData(context, selectedCategoryName),
                 isDark: isDark,
               ),
             ],
 
-            const SizedBox(height: 32),
+            SizedBox(height: 32.h),
           ],
         ),
       ),
     );
   }
 
-  /// Helper to map Category Names to API Endpoints and trigger fetch
   void _fetchCategoryData(BuildContext context, String category) {
     String url;
     String key = category.toLowerCase();
 
     switch (key) {
-      case 'tech':
-        url = AppUrls.technology;
-        break;
-      case 'health':
-        url = AppUrls.health;
-        break;
-      case 'science':
-        url = AppUrls.science;
-        break;
-      case 'gaming':
-        url = AppUrls.gaming;
-        break;
-      case 'business':
-        url = AppUrls.business;
-        break;
-      case 'entertainment':
-        url = AppUrls.entertainment;
-        break;
-      case 'sports':
-        url = AppUrls.sports;
-        break;
-      default:
-        return; // 'All' is handled separately
+      case 'tech': url = AppUrls.technology; break;
+      case 'health': url = AppUrls.health; break;
+      case 'science': url = AppUrls.science; break;
+      case 'gaming': url = AppUrls.gaming; break;
+      case 'business': url = AppUrls.business; break;
+      case 'entertainment': url = AppUrls.entertainment; break;
+      case 'sports': url = AppUrls.sports; break;
+      default: return;
     }
 
     context.read<NewsViewModel>().getNews(url, key);
   }
 
-  /// Reusable widget to build a section with Header, List, Loader, or Error.
   Widget _buildNewsSection(
     BuildContext context, {
     required String title,
@@ -298,15 +268,13 @@ class HomeScreen extends StatelessWidget {
             }
           },
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16.h),
 
         if (data != null) ...[
           if (data.articles.isEmpty)
-            const Center(child: Text("No articles found."))
+            Center(child: Text("No articles found.", style: TextStyle(fontSize: 14.sp)))
           else
             ListView.separated(
-              // IMPORTANT: shrinkWrap and NeverScrollable are required because
-              // this ListView is inside the parent SingleChildScrollView.
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: data.articles.length > 5 ? 5 : data.articles.length,
@@ -327,51 +295,43 @@ class HomeScreen extends StatelessWidget {
         ] else if (error != null) ...[
           _buildErrorWidget(context, error, onRetry),
         ] else ...[
-          const Padding(
-            padding: EdgeInsets.all(70.0),
-            child: Center(child: CustomLoader()),
+          Padding(
+            padding: EdgeInsets.all(70.w),
+            child: Center(child: CustomLoader(size: 40.w)),
           ),
         ],
-        const SizedBox(height: 32),
+        SizedBox(height: 32.h),
       ],
     );
   }
 
-  /// Styled Error Widget with Retry Button
-  Widget _buildErrorWidget(
-    BuildContext context,
-    String error,
-    VoidCallback onRetry,
-  ) {
+  Widget _buildErrorWidget(BuildContext context, String error, VoidCallback onRetry) {
     return Center(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.withOpacity(0.3)),
+          color: Colors.red.withAlpha(13),
+          borderRadius: BorderRadius.circular(12.w),
+          border: Border.all(color: Colors.red.withAlpha(76)),
         ),
         child: Column(
           children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 30),
-            const SizedBox(height: 8),
+            Icon(Icons.error_outline, color: Colors.red, size: 30.w),
+            SizedBox(height: 8.h),
             Text(
               error,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.red.shade500, fontSize: 14),
+              style: TextStyle(color: Colors.red.shade500, fontSize: 14.sp),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12.h),
             ElevatedButton(
               onPressed: onRetry,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade500,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
               ),
-              child: const Text("Retry"),
+              child: Text("Retry", style: TextStyle(fontSize: 14.sp)),
             ),
           ],
         ),

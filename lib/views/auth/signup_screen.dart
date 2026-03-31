@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:news_app/view_models/toggle_view_model.dart';
 import 'package:provider/provider.dart';
 
+import '../../utils/size_config.dart';
 import '../../view_models/firebase_auth_view_model.dart';
+import '../../view_models/toggle_view_model.dart';
 import '../../widgets/custom_loader.dart';
 import '../../widgets/custom_snack_bar.dart';
 import '../home/main_controller.dart';
@@ -17,19 +18,16 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Text Controllers
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // FocusNodes
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
 
   @override
   void dispose() {
-    // Prevent memory leaks by disposing controllers and nodes
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -40,34 +38,27 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _signUp() async {
-    // UX: Dismiss keyboard immediately
     FocusScope.of(context).unfocus();
 
     if (_formKey.currentState!.validate()) {
       final authVM = context.read<FirebaseAuthViewModel>();
 
-      // Call the Firebase Auth ViewModel
       final success = await authVM.signUpWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _nameController.text.trim(),
       );
 
-      // Async Safety Check
       if (!mounted) return;
 
       if (success) {
-        // Clear stack and navigate to MainController
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const MainController()),
           (route) => false,
         );
       } else {
-        // Use errorMessage from ViewModel
-        final error =
-            authVM.errorMessage ??
-            "Registration failed. Email might already exist.";
+        final error = authVM.errorMessage ?? "Registration failed. Email might already exist.";
         CustomSnackBar.showError(context, error);
       }
     }
@@ -77,7 +68,6 @@ class _SignupScreenState extends State<SignupScreen> {
     final authVM = context.read<FirebaseAuthViewModel>();
     final success = await authVM.googleSignIn();
 
-    // Async gap check
     if (!mounted) return;
 
     if (success) {
@@ -93,299 +83,238 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    SizeConfig().init(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Listen to ViewModel for loading state
     final authVM = context.watch<FirebaseAuthViewModel>();
-    // Use correct property: isLoading
     final isLoading = authVM.isLoading;
-    // Local UI State from ToggleViewModel
-    final isPasswordVisible = context
-        .watch<ToggleViewModel>()
-        .isSignupPasswordVisible;
-    // Theme-based colors for the new button
+    final isPasswordVisible = context.watch<ToggleViewModel>().isSignupPasswordVisible;
+
     final googleBtnBg = isDark ? Colors.grey.shade800 : Colors.white;
     final googleBtnBorder = Colors.grey.shade500;
     final googleBtnText = isDark ? Colors.white : Colors.black87;
+
     return Scaffold(
-      // GestureDetector closes keyboard when tapping background
       body: GestureDetector(
-        onTap: () {
-          FocusScope.of(context).requestFocus(FocusNode());
-        },
+        onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
         child: Center(
-          // SingleChildScrollView prevents "Bottom Overflow" when keyboard appears
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.only(left: 24.0, right: 24, bottom: 24),
+              padding: EdgeInsets.only(left: 24.w, right: 24.w, bottom: 24.h),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // --- Header ---
-                    // Error builder ensures app doesn't crash if asset is missing
                     Container(
-                      padding: EdgeInsets.all(11),
+                      padding: EdgeInsets.all(11.w),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.grey.shade700
-                            : Colors.indigo.shade100.withAlpha(150),
+                        color: isDark ? Colors.grey.shade700 : Colors.indigo.shade100.withAlpha(150),
                         shape: BoxShape.circle,
                       ),
                       child: Image.asset(
                         "assets/logo.png",
-                        width: 140,
-                        height: 140,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(
-                              Icons.newspaper,
-                              size: 100,
-                              color: Colors.indigo,
-                            ),
+                        width: 140.w,
+                        height: 140.w,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.newspaper,
+                          size: 100.w,
+                          color: Colors.indigo,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    const Text(
+                    SizedBox(height: 20.h),
+                    Text(
                       "Create Account",
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontSize: 32.sp, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    SizedBox(height: 8.h),
+                    Text(
                       "Join us and stay updated with the latest news",
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                      style: TextStyle(color: Colors.grey, fontSize: 16.sp),
                     ),
-                    const SizedBox(height: 30),
+                    SizedBox(height: 30.h),
 
-                    // --- Name Field ---
                     TextFormField(
                       controller: _nameController,
                       focusNode: _nameFocusNode,
                       textInputAction: TextInputAction.next,
+                      style: TextStyle(fontSize: 14.sp),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your full name';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your full name';
                         return null;
                       },
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.person_outline),
+                        prefixIcon: Icon(Icons.person_outline, size: 20.w),
                         hintText: "Full Name",
                         filled: true,
-                        fillColor: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.grey.shade100,
+                        fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade100,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                           borderSide: BorderSide.none,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16.h),
 
-                    // --- Email Field ---
                     TextFormField(
                       controller: _emailController,
                       focusNode: _emailFocusNode,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
+                      style: TextStyle(fontSize: 14.sp),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your email';
+                        if (!value.contains('@')) return 'Please enter a valid email';
                         return null;
                       },
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.email_outlined),
+                        prefixIcon: Icon(Icons.email_outlined, size: 20.w),
                         hintText: "Email",
                         filled: true,
-                        fillColor: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.grey.shade100,
+                        fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade100,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                           borderSide: BorderSide.none,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16.h),
 
-                    // --- Password Field ---
                     TextFormField(
                       controller: _passwordController,
                       focusNode: _passwordFocusNode,
                       obscureText: !isPasswordVisible,
                       textInputAction: TextInputAction.done,
+                      style: TextStyle(fontSize: 14.sp),
                       onFieldSubmitted: (_) => _signUp(),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter a password';
+                        if (value.length < 6) return 'Password must be at least 6 characters';
                         return null;
                       },
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        prefixIcon: Icon(Icons.lock_outline, size: 20.w),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            isPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                            isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            size: 20.w,
                           ),
                           onPressed: () {
-                            context
-                                .read<ToggleViewModel>()
-                                .toggleSignupPasswordVisibility();
+                            context.read<ToggleViewModel>().toggleSignupPasswordVisibility();
                           },
                         ),
                         hintText: "Password",
                         filled: true,
-                        fillColor: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.grey.shade100,
+                        fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade100,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                           borderSide: BorderSide.none,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24.h),
 
-                    // --- Sign Up Button ---
                     ElevatedButton(
                       onPressed: isLoading ? null : _signUp,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                         ),
                       ),
                       child: isLoading
-                          ? const CustomLoader(color: Colors.white, size: 24)
-                          : const Text(
+                          ? CustomLoader(color: Colors.white, size: 24.w)
+                          : Text(
                               "Sign Up",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
                             ),
                     ),
-                    SizedBox(height: 20),
-                    // --- OR Divider ---
+                    SizedBox(height: 20.h),
                     Row(
                       children: [
                         Expanded(child: Divider(color: Colors.grey.shade400)),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
                           child: Text(
                             "OR",
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w500, fontSize: 12.sp),
                           ),
                         ),
                         Expanded(child: Divider(color: Colors.grey.shade400)),
                       ],
                     ),
+                    SizedBox(height: 20.h),
 
-                    const SizedBox(height: 20),
-
-                    // --- Modern Google Sign In Button ---
                     InkWell(
                       onTap: isLoading ? null : _googleSignIn,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.w),
                       child: Container(
-                        height: 56,
+                        height: 52.h,
                         decoration: BoxDecoration(
                           color: googleBtnBg,
                           border: Border.all(color: googleBtnBorder),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withAlpha(13),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
                         child: isLoading
-                            ? const CustomLoader(color: Colors.indigo, size: 24)
+                            ? CustomLoader(color: Colors.indigo, size: 24.w)
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  // Google Logo (Network Image with fallback)
                                   Image.asset(
                                     "assets/google_logo.png",
-                                    height: 24,
-                                    width: 24,
+                                    height: 22.w,
+                                    width: 22.w,
                                     errorBuilder: (context, error, stackTrace) {
-                                      // Fallback to a styled 'G' text if image fails
                                       return Container(
-                                        width: 29,
-                                        height: 29,
+                                        width: 26.w,
+                                        height: 26.w,
                                         alignment: Alignment.center,
                                         decoration: const BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: Colors.indigo,
                                         ),
-                                        child: const Text(
+                                        child: Text(
                                           "G",
-                                          style: TextStyle(
-                                            fontSize: 19,
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                          style: TextStyle(fontSize: 16.sp, color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       );
                                     },
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: 12.w),
                                   Text(
                                     "Continue with Google",
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w600,
-                                      color: googleBtnText,
-                                    ),
+                                    style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600, color: googleBtnText),
                                   ),
                                 ],
                               ),
                       ),
                     ),
-
-                    // --- Footer / Login Link ---
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20.h),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Don't have an account?"),
+                        Text("Don't have an account?", style: TextStyle(fontSize: 13.sp)),
                         TextButton(
                           onPressed: () {
-                            // Close keyboard before navigating back
                             FocusScope.of(context).requestFocus(FocusNode());
                             Navigator.pop(context);
                           },
                           child: Text(
                             "Login",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.indigo,
-                              fontSize: 17,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo, fontSize: 14.sp),
                           ),
                         ),
                       ],

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../models/news_response_model.dart';
-import '../services/utils/date_formatter.dart';
+import '../../models/news_response_model.dart';
+import '../../services/utils/date_formatter.dart';
+import '../../utils/size_config.dart';
 
 class FeaturedNewsCard extends StatelessWidget {
   final Article news;
@@ -10,75 +11,117 @@ class FeaturedNewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // We don't necessarily need isDark here because we are placing text over an image,
+    // so the text should generally be light to contrast with the dark gradient overlay.
 
-    return Card(
-      elevation: 3,
-      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-      shadowColor: isDark ? Colors.grey.shade800 : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadiusGeometry.circular(24),
+    return Container(
+      height: 280.h,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24.w),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(50),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0, right: 8, top: 5),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(24)),
-              child: Image.network(
-                news.image,
-                height: 270,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (c, o, s) => Container(
-                  height: 270,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage("assets/no_img.png"),
-                      fit: BoxFit.fill,
-                    ),
+          // 1. Background Image
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24.w),
+            child: Image.network(
+              news.image,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage("assets/no_img.png"),
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(18),
+          
+          // 2. Gradient Overlay for Text Readability
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24.w),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withAlpha(20),
+                  Colors.black.withAlpha(180),
+                  Colors.black.withAlpha(220),
+                ],
+                stops: const [0.0, 0.5, 0.8, 1.0],
+              ),
+            ),
+          ),
+
+          // 3. Text Content
+          Positioned(
+            bottom: 20.h,
+            left: 20.w,
+            right: 20.w,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Category / Source Badge
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.circular(8.w),
+                  ),
+                  child: Text(
+                    news.source.name.toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                
+                // Title
                 Text(
-                  "${news.title}...",
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w600,
-                    height: 1,
+                  news.title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                    height: 1.3,
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 8.h),
+                
+                // Date & Time
                 Row(
                   children: [
-                    Text(
-                      news.source.name,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade500,
-                      ),
+                    Icon(
+                      Icons.access_time_rounded,
+                      color: Colors.grey.shade300,
+                      size: 14.w,
                     ),
-                    const Spacer(),
+                    SizedBox(width: 6.w),
                     Text(
                       DateFormatter.format(news.publishedAt),
                       style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                        letterSpacing: 0,
+                        color: Colors.grey.shade300,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../utils/size_config.dart';
 import '../../view_models/firebase_auth_view_model.dart';
 import '../../view_models/toggle_view_model.dart';
 import '../../widgets/custom_loader.dart';
@@ -37,7 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // Dismiss keyboard
     FocusScope.of(context).unfocus();
 
     if (_formKey.currentState!.validate()) {
@@ -48,7 +48,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text.trim(),
       );
 
-      // Async gap check
       if (!mounted) return;
 
       if (success) {
@@ -69,7 +68,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final authVM = context.read<FirebaseAuthViewModel>();
     final success = await authVM.googleSignIn();
 
-    // Async gap check
     if (!mounted) return;
 
     if (success) {
@@ -85,18 +83,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    SizeConfig().init(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Listen to Firebase ViewModel for loading state
     final authVM = context.watch<FirebaseAuthViewModel>();
     final isLoading = authVM.isLoading;
+    final isPasswordVisible = context.watch<ToggleViewModel>().isLoginPasswordVisible;
 
-    // Listen to ToggleViewModel for password visibility
-    final isPasswordVisible = context
-        .watch<ToggleViewModel>()
-        .isLoginPasswordVisible;
-
-    // Theme-based colors for the new button
     final googleBtnBg = isDark ? Colors.grey.shade800 : Colors.white;
     final googleBtnBorder = Colors.grey.shade500;
     final googleBtnText = isDark ? Colors.white : Colors.black87;
@@ -104,9 +96,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        actionsPadding: const EdgeInsets.only(right: 15, top: 10),
+        actionsPadding: EdgeInsets.only(right: 15.w, top: 10.h),
         actions: [
-          // --- Guest Mode / Skip Button ---
           TextButton(
             onPressed: () {
               Navigator.pushReplacement(
@@ -115,16 +106,15 @@ class _LoginScreenState extends State<LoginScreen> {
               );
             },
             style: OutlinedButton.styleFrom(backgroundColor: Colors.indigo),
-            child: const Text(
+            child: Text(
               "Skip",
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
           ),
-          const SizedBox(width: 15),
         ],
       ),
       body: GestureDetector(
@@ -132,276 +122,212 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.all(24.w),
               child: Form(
                 key: _formKey,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // --- Header Section ---
                     Container(
-                      padding: EdgeInsets.all(11),
+                      padding: EdgeInsets.all(11.w),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.grey.shade700
-                            : Colors.indigo.shade100.withAlpha(150),
+                        color: isDark ? Colors.grey.shade700 : Colors.indigo.shade100.withAlpha(150),
                         shape: BoxShape.circle,
                       ),
                       child: Image.asset(
                         "assets/logo.png",
-                        width: 140,
-                        height: 140,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(
-                              Icons.newspaper,
-                              size: 100,
-                              color: Colors.indigo,
-                            ),
+                        width: 140.w,
+                        height: 140.w,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.newspaper,
+                          size: 100.w,
+                          color: Colors.indigo,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    const Text(
+                    SizedBox(height: 20.h),
+                    Text(
                       "Welcome Back",
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontSize: 28.sp, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    SizedBox(height: 8.h),
+                    Text(
                       "Login to continue exploring news",
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                      style: TextStyle(color: Colors.grey, fontSize: 14.sp),
                     ),
-                    const SizedBox(height: 30),
-
-                    // --- Email Field ---
+                    SizedBox(height: 30.h),
                     TextFormField(
                       controller: _emailController,
                       focusNode: _emailFocusNode,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
+                      style: TextStyle(fontSize: 14.sp),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your email';
+                        if (!value.contains('@')) return 'Please enter a valid email';
                         return null;
                       },
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.email_outlined),
+                        prefixIcon: Icon(Icons.email_outlined, size: 20.w),
                         hintText: "Email",
                         filled: true,
-                        fillColor: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.grey.shade100,
+                        fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade100,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                           borderSide: BorderSide.none,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // --- Password Field ---
+                    SizedBox(height: 16.h),
                     TextFormField(
                       controller: _passwordController,
                       focusNode: _passwordFocusNode,
                       obscureText: !isPasswordVisible,
                       textInputAction: TextInputAction.done,
+                      style: TextStyle(fontSize: 14.sp),
                       onFieldSubmitted: (_) => _login(),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your password';
+                        if (value.length < 6) return 'Password must be at least 6 characters';
                         return null;
                       },
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        prefixIcon: Icon(Icons.lock_outline, size: 20.w),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            isPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
+                            isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            size: 20.w,
                           ),
                           onPressed: () {
-                            context
-                                .read<ToggleViewModel>()
-                                .toggleLoginPasswordVisibility();
+                            context.read<ToggleViewModel>().toggleLoginPasswordVisibility();
                           },
                         ),
                         hintText: "Password",
                         filled: true,
-                        fillColor: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.grey.shade100,
+                        fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade100,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                           borderSide: BorderSide.none,
                         ),
                       ),
                     ),
-
-                    // --- Forgot Password Link ---
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const ForgotPasswordScreen(),
-                            ),
+                            MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
                           );
                         },
-                        child: const Text(
+                        child: Text(
                           "Forgot Password?",
-                          style: TextStyle(
-                            color: Colors.indigo,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 12.sp),
                         ),
                       ),
                     ),
-
-                    // --- Login Button ---
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10.h),
                     ElevatedButton(
                       onPressed: isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                         ),
                       ),
                       child: isLoading
-                          ? const CustomLoader(color: Colors.white, size: 24)
-                          : const Text(
+                          ? CustomLoader(color: Colors.white, size: 24.w)
+                          : Text(
                               "Login",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
                             ),
                     ),
-
-                    const SizedBox(height: 20),
-
-                    // --- OR Divider ---
+                    SizedBox(height: 20.h),
                     Row(
                       children: [
                         Expanded(child: Divider(color: Colors.grey.shade400)),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
                           child: Text(
                             "OR",
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w500, fontSize: 12.sp),
                           ),
                         ),
                         Expanded(child: Divider(color: Colors.grey.shade400)),
                       ],
                     ),
-
-                    const SizedBox(height: 20),
-
-                    // --- Modern Google Sign In Button ---
+                    SizedBox(height: 20.h),
                     InkWell(
                       onTap: isLoading ? null : _googleLogin,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12.w),
                       child: Container(
-                        height: 56,
+                        height: 52.h,
                         decoration: BoxDecoration(
                           color: googleBtnBg,
                           border: Border.all(color: googleBtnBorder),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(12.w),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withAlpha(13),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
                         child: isLoading
-                            ? const CustomLoader(color: Colors.indigo, size: 24)
+                            ? CustomLoader(color: Colors.indigo, size: 24.w)
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  // Google Logo (Network Image with fallback)
                                   Image.asset(
                                     "assets/google_logo.png",
-                                    height: 24,
-                                    width: 24,
+                                    height: 22.w,
+                                    width: 22.w,
                                     errorBuilder: (context, error, stackTrace) {
-                                      // Fallback to a styled 'G' text if image fails
                                       return Container(
-                                        width: 29,
-                                        height: 29,
+                                        width: 26.w,
+                                        height: 26.w,
                                         alignment: Alignment.center,
                                         decoration: const BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: Colors.indigo,
                                         ),
-                                        child: const Text(
+                                        child: Text(
                                           "G",
-                                          style: TextStyle(
-                                            fontSize: 19,
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                          style: TextStyle(fontSize: 16.sp, color: Colors.white, fontWeight: FontWeight.bold),
                                         ),
                                       );
                                     },
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: 12.w),
                                   Text(
                                     "Continue with Google",
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w600,
-                                      color: googleBtnText,
-                                    ),
+                                    style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600, color: googleBtnText),
                                   ),
                                 ],
                               ),
                       ),
                     ),
-
-                    // --- Sign Up Link ---
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20.h),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Don't have an account?"),
+                        Text("Don't have an account?", style: TextStyle(fontSize: 13.sp)),
                         TextButton(
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignupScreen(),
-                              ),
+                              MaterialPageRoute(builder: (context) => const SignupScreen()),
                             );
                           },
                           child: Text(
                             "Sign Up",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.indigo,
-                              fontSize: 17,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo, fontSize: 14.sp),
                           ),
                         ),
                       ],

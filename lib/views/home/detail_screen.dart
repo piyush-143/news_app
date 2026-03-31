@@ -3,6 +3,7 @@ import 'package:news_app/services/url_launch_service.dart';
 
 import '../../models/news_response_model.dart';
 import '../../services/utils/date_formatter.dart';
+import '../../utils/size_config.dart';
 
 class DetailScreen extends StatelessWidget {
   final Article news;
@@ -10,39 +11,31 @@ class DetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Extract theme values once for cleaner code below
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeColor = Theme.of(context).primaryColor;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
     return Scaffold(
-      // Using a Stack to float the "Read Article" button over the scrollable content
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight:
-                    400, // Make the image tall for an immersive feel
-                pinned: true, // Keep the back button visible when scrolled up
-                stretch: true, // Allow the image to "zoom in" when pulling down
-                backgroundColor: isDark
-                    ? const Color(0xFF1E1E1E)
-                    : Colors.white,
-
-                // Custom Back Button with background for visibility on any image
+                expandedHeight: 400.h,
+                pinned: true,
+                stretch: true,
+                backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 leading: Container(
-                  margin: const EdgeInsets.all(8),
+                  margin: EdgeInsets.all(8.w),
                   decoration: BoxDecoration(
                     color: Colors.black.withAlpha(190),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: Icon(Icons.arrow_back, color: Colors.white, size: 24.w),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
-
                 flexibleSpace: FlexibleSpaceBar(
                   stretchModes: const [
                     StretchMode.zoomBackground,
@@ -51,7 +44,6 @@ class DetailScreen extends StatelessWidget {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // The News Image
                       Image.network(
                         news.image,
                         fit: BoxFit.fill,
@@ -64,7 +56,6 @@ class DetailScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // Gradient Overlay: Ensures the top status bar area is legible
                       const DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -82,122 +73,89 @@ class DetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // --- Article Content Section ---
               SliverToBoxAdapter(
-                // VISUAL TRICK: We shift the container UP by 20 pixels (`offset: -20`).
-                // This creates the effect of the white content sheet overlapping
-                // the bottom of the image with rounded corners.
                 child: Transform.translate(
                   offset: const Offset(0, -20),
                   child: Container(
                     decoration: BoxDecoration(
                       color: backgroundColor,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(30),
-                      ),
-                      // Shadow adds depth between the sheet and the image
+                      borderRadius: Radius.circular(30.w) == Radius.circular(30.w) ? BorderRadius.vertical(top: Radius.circular(30.w)) : BorderRadius.vertical(top: Radius.circular(30.w)),
                       boxShadow: const [
                         BoxShadow(
-                          color: Colors.black26, // Subtle shadow
+                          color: Colors.black26,
                           blurRadius: 10,
                           offset: Offset(0, -5),
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
+                    padding: EdgeInsets.fromLTRB(24.w, 30.h, 24.w, 24.h),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- Source Name & Date ---
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
+                              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                               decoration: BoxDecoration(
                                 color: themeColor.withAlpha(40),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(20.w),
                               ),
                               child: Text(
                                 news.source.name,
                                 style: TextStyle(
                                   color: themeColor,
-                                  fontSize: 12,
+                                  fontSize: 12.sp,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                             const Spacer(),
-                            Icon(
-                              Icons.access_time_rounded,
-                              size: 16,
-                              color: Colors.grey.shade500,
-                            ),
-                            const SizedBox(width: 6),
+                            Icon(Icons.access_time_rounded, size: 16.w, color: Colors.grey.shade500),
+                            SizedBox(width: 6.w),
                             Text(
                               DateFormatter.format(news.publishedAt),
                               style: TextStyle(
                                 color: Colors.grey.shade500,
-                                fontSize: 12,
+                                fontSize: 12.sp,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-
-                        // --- Headline ---
+                        SizedBox(height: 20.h),
                         Text(
                           news.title,
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: 24.sp,
                             fontWeight: FontWeight.w800,
                             color: isDark ? Colors.white : Colors.black87,
                             height: 1.3,
                             letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(height: 24),
-
+                        SizedBox(height: 24.h),
                         Divider(color: Colors.grey.shade400),
-                        const SizedBox(height: 24),
-
-                        // --- Description (Lead Paragraph) ---
-                        // Styled in italics/bold to differentiate from body text
+                        SizedBox(height: 24.h),
                         Text(
                           "${news.description}.",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 16.sp,
                             fontWeight: FontWeight.w600,
-                            color: isDark
-                                ? Colors.grey.shade300
-                                : Colors.grey.shade800,
+                            color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
                             height: 1.6,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
-                        const SizedBox(height: 16),
-
-                        // --- Body Content ---
-                        // API Note: Most free news APIs truncate this (e.g., "... [+1200 chars]").
-                        // That is why the "Read Full Article" button below is necessary.
+                        SizedBox(height: 16.h),
                         Text(
                           news.content,
                           style: TextStyle(
-                            fontSize: 16,
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade700,
+                            fontSize: 16.sp,
+                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
                             height: 1.8,
                           ),
                         ),
-
-                        const SizedBox(
-                          height: 100,
-                        ), // Extra space so FAB doesn't cover text
+                        SizedBox(height: 100.h),
                       ],
                     ),
                   ),
@@ -205,42 +163,30 @@ class DetailScreen extends StatelessWidget {
               ),
             ],
           ),
-
-          // --- Bottom Floating Action Button ---
           Positioned(
-            bottom: 30,
-            left: 24,
-            right: 24,
+            bottom: 30.h,
+            left: 24.w,
+            right: 24.w,
             child: SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 56.h,
               child: ElevatedButton(
-                onPressed: () => UrlLaunchService.openArticle(
-                  context,
-                  news.url,
-                  news.source.name,
-                ),
+                onPressed: () => UrlLaunchService.openArticle(context, news.url, news.source.name),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.indigo,
                   foregroundColor: Colors.white,
                   elevation: 8,
                   shadowColor: themeColor.withAlpha(80),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(16.w),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      "Read Full Article",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, size: 20),
+                    Text("Read Full Article", style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                    SizedBox(width: 8.w),
+                    Icon(Icons.arrow_forward_rounded, size: 20.w),
                   ],
                 ),
               ),

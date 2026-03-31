@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:news_app/firebase_options.dart';
 import 'package:news_app/view_models/firebase_auth_view_model.dart';
@@ -8,15 +9,17 @@ import 'package:news_app/view_models/index_view_model.dart';
 import 'package:news_app/view_models/news_view_model.dart';
 import 'package:news_app/view_models/theme_view_model.dart';
 import 'package:news_app/view_models/toggle_view_model.dart';
-import 'package:news_app/views/splash_screen.dart';
+import 'package:news_app/views/splash/splash_screen.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
   // Required for async operations (like SharedPreferences) to run before the UI starts
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Fix for "HandshakeException" on some older devices or emulators
-  HttpOverrides.global = MyHttpOverrides();
+  // Fix for "HandshakeException" on some older devices or emulators (DEBUG ONLY)
+  if (kDebugMode) {
+    HttpOverrides.global = MyHttpOverrides();
+  }
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
     // Dependency Injection:

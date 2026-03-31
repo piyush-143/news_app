@@ -4,16 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:news_app/view_models/index_view_model.dart';
 import 'package:provider/provider.dart';
 
+import '../../utils/size_config.dart';
 import '../../view_models/firebase_auth_view_model.dart';
 import '../../view_models/theme_view_model.dart';
 import '../../widgets/custom_snack_bar.dart';
 import '../auth/login_screen.dart';
 import '../profile/user_profile_screen.dart';
 
-/// The Settings screen allows users to:
-/// 1. Toggle Dark/Light Mode.
-/// 2. Manage their account (Login/Logout/Profile).
-/// 3. Access static pages (Privacy, Help).
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -21,29 +18,20 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Define shared colors for consistency
     final textColor = isDark ? Colors.white : Colors.black;
     final iconColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
     final tileBgColor = isDark ? Colors.grey.shade900 : Colors.white;
 
-    // Consumer2 allows us to listen to BOTH Theme changes and Auth changes
     return Consumer2<ThemeViewModel, FirebaseAuthViewModel>(
       builder: (context, themeVM, fbVM, child) {
-        // --- UPDATED IMAGE LOGIC ---
-        // 1. Get local Firestore path
         final localPath = fbVM.profileImagePath;
-
-        // 2. Check if that file actually exists on THIS device
-        // (This fixes the issue on re-install where path exists in DB but file is gone)
         bool localFileExists = false;
         if (localPath != null && localPath.isNotEmpty) {
           localFileExists = File(localPath).existsSync();
         }
 
-        // 3. Get Google/Network URL from User object
         final networkUrl = fbVM.currentUser?.photoURL;
 
-        // 4. Select Provider
         ImageProvider? imageProvider;
         if (localFileExists) {
           imageProvider = ResizeImage(FileImage(File(localPath!)), width: 100);
@@ -53,12 +41,11 @@ class SettingsScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            titleSpacing: 24,
-            title: const Text("Settings"),
+            titleSpacing: 24.w,
+            title: Text("Settings", style: TextStyle(fontSize: 24.sp)),
             actions: [
-              // --- Profile Icon in AppBar ---
               Padding(
-                padding: const EdgeInsets.only(right: 24.0),
+                padding: EdgeInsets.only(right: 24.w),
                 child: GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -69,16 +56,13 @@ class SettingsScreen extends StatelessWidget {
                     );
                   },
                   child: CircleAvatar(
-                    radius: 22,
-                    backgroundColor: isDark
-                        ? Colors.grey.shade800
-                        : Colors.indigo.shade50,
+                    radius: 22.w,
+                    backgroundColor: isDark ? Colors.grey.shade800 : Colors.indigo.shade50,
                     backgroundImage: imageProvider,
-                    // Only show Icon if there is no image
                     child: (imageProvider == null)
                         ? Icon(
                             Icons.person,
-                            size: 25,
+                            size: 25.w,
                             color: isDark ? Colors.white : Colors.indigo,
                           )
                         : null,
@@ -88,20 +72,17 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           body: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
             children: [
-              // --- 1. Branding Header ---
               Center(
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
-                      width: 140,
-                      height: 140,
+                      padding: EdgeInsets.all(8.w),
+                      width: 140.w,
+                      height: 140.w,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.grey.shade800
-                            : Colors.indigo.shade100,
+                        color: isDark ? Colors.grey.shade800 : Colors.indigo.shade100,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -117,45 +98,42 @@ class SettingsScreen extends StatelessWidget {
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(
                             Icons.newspaper_rounded,
-                            size: 60,
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.indigo,
+                            size: 60.w,
+                            color: isDark ? Colors.grey.shade400 : Colors.indigo,
                           );
                         },
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10.h),
                     Text(
                       "News App",
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 24.sp,
                         fontWeight: FontWeight.w900,
                         color: textColor,
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    SizedBox(height: 5.h),
                     Text(
                       "Your Daily Dose of News",
                       style: TextStyle(
                         color: Colors.grey.shade500,
-                        fontSize: 14,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 40),
+              SizedBox(height: 40.h),
 
-              // --- 2. Preferences Section ---
               _buildSectionHeader(textColor, "Preferences"),
               Container(
-                margin: const EdgeInsets.only(bottom: 16),
+                margin: EdgeInsets.only(bottom: 16.h),
                 decoration: BoxDecoration(
                   color: tileBgColor,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16.w),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withAlpha(isDark ? 2 : 30),
@@ -164,38 +142,30 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                // Dark Mode Toggle
                 child: SwitchListTile(
                   title: Text(
                     "Dark Mode",
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: textColor,
-                      fontSize: 16,
+                      fontSize: 16.sp,
                     ),
                   ),
                   secondary: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.grey.shade800
-                          : Colors.indigo.shade50,
+                      color: isDark ? Colors.grey.shade800 : Colors.indigo.shade50,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      themeVM.isDarkMode
-                          ? Icons.dark_mode_rounded
-                          : Icons.light_mode_rounded,
+                      themeVM.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
                       color: themeVM.isDarkMode ? Colors.white : Colors.orange,
-                      size: 22,
+                      size: 22.w,
                     ),
                   ),
                   value: themeVM.isDarkMode,
                   onChanged: (val) => themeVM.toggleTheme(val),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
                   activeTrackColor: Colors.indigo.shade200,
                   activeThumbColor: Colors.indigo,
                   inactiveTrackColor: Colors.grey.shade300,
@@ -203,9 +173,8 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 10),
+              SizedBox(height: 10.h),
 
-              // --- 3. Support Section ---
               _buildSectionHeader(textColor, "Support"),
 
               _buildOptionTile(
@@ -230,15 +199,11 @@ class SettingsScreen extends StatelessWidget {
                 isDark: isDark,
                 textColor: textColor,
                 iconColor: iconColor,
-                onTap: () => CustomSnackBar.showInfo(
-                  context,
-                  "Sharing not implemented yet",
-                ),
+                onTap: () => CustomSnackBar.showInfo(context, "Sharing not implemented yet"),
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h),
 
-              // --- 4. Auth Action Button ---
               TextButton(
                 onPressed: () async {
                   context.read<IndexViewModel>().reset();
@@ -254,9 +219,9 @@ class SettingsScreen extends StatelessWidget {
                   }
                 },
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(16.w),
                     side: BorderSide(color: Colors.red.shade700.withAlpha(200)),
                   ),
                   backgroundColor: Colors.red.shade100,
@@ -265,22 +230,21 @@ class SettingsScreen extends StatelessWidget {
                   "Sign Out",
                   style: TextStyle(
                     color: Colors.red.shade700,
-                    fontSize: 18,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
 
-              const SizedBox(height: 10),
+              SizedBox(height: 10.h),
 
-              // Version Info
               Center(
                 child: Text(
                   "Version 1.0.0",
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12.sp),
                 ),
               ),
-              const SizedBox(height: 30),
+              SizedBox(height: 30.h),
             ],
           ),
         );
@@ -288,16 +252,14 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  // --- Helper Widgets ---
-
   Widget _buildSectionHeader(Color textColor, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16, left: 4),
+      padding: EdgeInsets.only(bottom: 16.h, left: 4.w),
       child: Text(
         title,
         style: TextStyle(
           color: textColor.withAlpha(200),
-          fontSize: 16,
+          fontSize: 16.sp,
           fontWeight: FontWeight.bold,
           letterSpacing: 1,
         ),
@@ -314,15 +276,15 @@ class SettingsScreen extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.only(bottom: 16.h),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.w),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: isDark ? Colors.grey.shade900 : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(16.w),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withAlpha(isDark ? 2 : 30),
@@ -334,18 +296,18 @@ class SettingsScreen extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
                   color: isDark ? Colors.grey.shade800 : Colors.indigo.shade50,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 22, color: iconColor),
+                child: Icon(icon, size: 22.w, color: iconColor),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16.w),
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: textColor,
                 ),
@@ -354,7 +316,7 @@ class SettingsScreen extends StatelessWidget {
               Icon(
                 Icons.chevron_right_rounded,
                 color: Colors.grey.shade400,
-                size: 28,
+                size: 28.w,
               ),
             ],
           ),
